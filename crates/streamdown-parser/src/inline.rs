@@ -4,7 +4,7 @@
 //! bold, italic, underline, strikethrough, inline code, links, images,
 //! and footnotes.
 
-use crate::tokenizer::{not_text, Token, Tokenizer};
+use crate::tokenizer::{Token, Tokenizer};
 use streamdown_ansi::codes::digit_to_superscript;
 
 /// Result of parsing inline content.
@@ -249,13 +249,15 @@ impl InlineParser {
                 }
 
                 Token::Underscore => {
-                    // Check context - underscore in middle of word shouldn't trigger
-                    let prev_is_text = i > 0
-                        && matches!(&tokens[i - 1], Token::Text(s) if !not_text(s));
-                    let next_is_text = i + 1 < tokens.len()
-                        && matches!(&tokens[i + 1], Token::Text(s) if !not_text(s));
+                    // Check context - underscore in middle of word shouldn't trigger italic.
+                    // We check the ADJACENT character, not the entire token, because tokens
+                    // may contain spaces (e.g., "use sem" before "_search tool").
+                    let prev_char_is_alnum = i > 0
+                        && matches!(&tokens[i - 1], Token::Text(s) if s.chars().last().map(|c| c.is_alphanumeric()).unwrap_or(false));
+                    let next_char_is_alnum = i + 1 < tokens.len()
+                        && matches!(&tokens[i + 1], Token::Text(s) if s.chars().next().map(|c| c.is_alphanumeric()).unwrap_or(false));
 
-                    if prev_is_text && next_is_text {
+                    if prev_char_is_alnum && next_char_is_alnum {
                         // Underscore in middle of word - treat as text
                         buffer.push('_');
                     } else {
@@ -584,6 +586,91 @@ mod tests {
         assert_eq!(
             elements,
             vec![InlineElement::Text("some_variable_name".to_string())]
+        );
+    }
+
+    #[test]
+    fn test_underscore_in_word_with_surrounding_text() {
+        // This is the key test case - underscore in word with spaces around
+        // Previously this would incorrectly parse "_search tool" as italic
+        let mut parser = InlineParser::new();
+        let elements = parser.parse("use sem_search tool");
+        assert_eq!(
+            elements,
+            vec![InlineElement::Text("use sem_search tool".to_string())]
+        );
+    }
+
+    #[test]
+    fn test_underscore_at_start_of_text() {
+        let mut parser = InlineParser::new();
+        let elements = parser.parse("sem_search");
+        assert_eq!(
+            elements,
+            vec![InlineElement::Text("sem_search".to_string())]
+        );
+    }
+
+    #[test]
+    fn test_underscore_at_end_of_text() {
+        let mut parser = InlineParser::new();
+        let elements = parser.parse("sem_search is useful");
+        assert_eq!(
+            elements,
+            vec![InlineElement::Text("sem_search is useful".to_string())]
+        );
+    }
+
+    #[test]
+    fn test_multiple_underscores_in_text() {
+        let mut parser = InlineParser::new();
+        let elements = parser.parse("use my_var_name here");
+        assert_eq!(
+            elements,
+            vec![InlineElement::Text("use my_var_name here".to_string())]
+        );
+    }
+
+    #[test]
+    fn test_underscore_italic_still_works() {
+        // Real italic with underscores should still work
+        let mut parser = InlineParser::new();
+        let elements = parser.parse("this is _italic_ text");
+        assert_eq!(
+            elements,
+            vec![
+                InlineElement::Text("this is ".to_string()),
+                InlineElement::Italic("italic".to_string()),
+                InlineElement::Text(" text".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_underscore_italic_at_boundaries() {
+        // Italic at word boundaries (space before underscore)
+        let mut parser = InlineParser::new();
+        let elements = parser.parse("word _italic_");
+        assert_eq!(
+            elements,
+            vec![
+                InlineElement::Text("word ".to_string()),
+                InlineElement::Italic("italic".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_mixed_underscore_scenarios() {
+        // Mix of variable names and real italic
+        let mut parser = InlineParser::new();
+        let elements = parser.parse("use my_func for _emphasis_");
+        assert_eq!(
+            elements,
+            vec![
+                InlineElement::Text("use my_func for ".to_string()),
+                InlineElement::Italic("emphasis".to_string()),
+            ]
         );
     }
 
