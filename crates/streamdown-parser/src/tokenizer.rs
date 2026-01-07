@@ -26,6 +26,15 @@ static IMAGE_RE: LazyLock<Regex> =
 static FOOTNOTE_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\[\^(\d+)\]:?").unwrap());
 
+/// Regex for matching inline code spans: `code` or ``code``
+static CODE_SPAN_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"``[^`]+``|`[^`]+`").unwrap());
+
+/// Find byte ranges of inline code spans in a line.
+fn find_code_regions(line: &str) -> Vec<(usize, usize)> {
+    CODE_SPAN_RE.find_iter(line).map(|m| (m.start(), m.end())).collect()
+}
+
 /// Token types for inline markdown content.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {
@@ -210,6 +219,12 @@ impl Tokenizer {
                 }
             }
         }
+
+        // Filter out extractions inside code spans (backtick-delimited regions)
+        let code_regions = find_code_regions(line);
+        extractions.retain(|(start, end, _)| {
+            !code_regions.iter().any(|(cs, ce)| *start >= *cs && *end <= *ce)
+        });
 
         // Sort extractions by start position
         extractions.sort_by_key(|(start, _, _)| *start);
@@ -453,5 +468,13 @@ mod tests {
         assert!(not_text("**"));
         assert!(not_text("*"));
         assert!(not_text("中文")); // CJK
+    }
+
+    #[test]
+    fn test_link_inside_code_not_extracted() {
+        let tokenizer = Tokenizer::new();
+        let tokens = tokenizer.tokenize("`[text](url)`");
+        // Link inside backticks should NOT be extracted
+        assert!(!tokens.iter().any(|t| matches!(t, Token::Link { .. })));
     }
 }
