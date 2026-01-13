@@ -270,11 +270,8 @@ mod tests {
             _state: &ParseState,
             _style: &ComputedStyle,
         ) -> Option<ProcessResult> {
-            if line.starts_with("!echo ") {
-                Some(ProcessResult::Lines(vec![line[6..].to_string()]))
-            } else {
-                None
-            }
+            line.strip_prefix("!echo ")
+                .map(|stripped| ProcessResult::Lines(vec![stripped.to_string()]))
         }
 
         fn flush(&mut self) -> Option<Vec<String>> {

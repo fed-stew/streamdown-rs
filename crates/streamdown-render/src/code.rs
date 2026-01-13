@@ -108,7 +108,13 @@ pub fn render_code_start(
         lines.push(format!("{}{}{}{}{}", left_margin, fg, bg, border, RESET));
     } else {
         // Simple border with spaces (copy-paste friendly)
-        lines.push(format!("{}{}{}{}", left_margin, bg, " ".repeat(width), RESET));
+        lines.push(format!(
+            "{}{}{}{}",
+            left_margin,
+            bg,
+            " ".repeat(width),
+            RESET
+        ));
     }
 
     // Language label if provided
@@ -162,7 +168,9 @@ pub fn render_code_line(
     for (i, code_line) in wrapped_lines.iter().enumerate() {
         // Highlight the line
         let highlighted = if let Some(ref mut hl_state) = state.highlight_state {
-            state.highlighter.highlight_line_with_state(code_line, hl_state)
+            state
+                .highlighter
+                .highlight_line_with_state(code_line, hl_state)
         } else {
             code_line.to_string()
         };
@@ -223,7 +231,13 @@ pub fn render_code_end(
         lines.push(format!("{}{}{}{}{}", left_margin, fg, bg, border, RESET));
     } else {
         // Simple border with spaces
-        lines.push(format!("{}{}{}{}", left_margin, bg, " ".repeat(width), RESET));
+        lines.push(format!(
+            "{}{}{}{}",
+            left_margin,
+            bg,
+            " ".repeat(width),
+            RESET
+        ));
     }
 
     lines
@@ -349,7 +363,7 @@ mod tests {
     #[test]
     fn test_render_code_start_pretty() {
         let lines = render_code_start(Some("rust"), 80, "", &default_style(), true);
-        assert!(lines.len() >= 1);
+        assert!(!lines.is_empty());
         // Should have ▄ border
         assert!(lines[0].contains(CODEPAD_TOP));
     }
@@ -357,7 +371,7 @@ mod tests {
     #[test]
     fn test_render_code_start_not_pretty() {
         let lines = render_code_start(Some("rust"), 80, "", &default_style(), false);
-        assert!(lines.len() >= 1);
+        assert!(!lines.is_empty());
         // Should NOT have ▄ border (space-based instead)
         assert!(!lines[0].contains(CODEPAD_TOP));
     }
@@ -387,10 +401,7 @@ mod tests {
         state.add_raw_line("    println!(\"Hello\");");
         state.add_raw_line("}");
 
-        assert_eq!(
-            state.raw_code(),
-            "fn main() {\n    println!(\"Hello\");\n}"
-        );
+        assert_eq!(state.raw_code(), "fn main() {\n    println!(\"Hello\");\n}");
     }
 
     #[test]

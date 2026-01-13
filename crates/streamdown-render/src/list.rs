@@ -18,10 +18,10 @@ use streamdown_parser::{decode_html_entities, InlineElement, InlineParser, ListB
 
 /// Bullet characters for different nesting levels.
 pub const BULLETS: [&str; 4] = [
-    "•",   // Level 0: Filled circle
-    "◦",   // Level 1: Empty circle
-    "▪",   // Level 2: Small filled square
-    "‣",   // Level 3: Triangular bullet
+    "•", // Level 0: Filled circle
+    "◦", // Level 1: Empty circle
+    "▪", // Level 2: Small filled square
+    "‣", // Level 3: Triangular bullet
 ];
 
 /// List rendering state.
@@ -237,7 +237,15 @@ pub fn render_list_item(
     let next_prefix = format!("{}{}", left_margin, " ".repeat(content_indent));
 
     // Note: text_wrap handles ANSI codes properly via strip_ansi option
-    let wrapped = text_wrap(&rendered_content, content_width, 0, &first_prefix, &next_prefix, false, true);
+    let wrapped = text_wrap(
+        &rendered_content,
+        content_width,
+        0,
+        &first_prefix,
+        &next_prefix,
+        false,
+        true,
+    );
 
     if wrapped.is_empty() {
         vec![first_prefix]
@@ -353,8 +361,14 @@ mod tests {
         // Second level should use different bullet or more indent
         assert!(lines2[0].contains("Level 2"));
         // Check it has more leading spaces
-        let indent1 = lines1[0].chars().take_while(|c| *c == ' ' || *c == '\t').count();
-        let indent2 = lines2[0].chars().take_while(|c| *c == ' ' || *c == '\t').count();
+        let indent1 = lines1[0]
+            .chars()
+            .take_while(|c| *c == ' ' || *c == '\t')
+            .count();
+        let indent2 = lines2[0]
+            .chars()
+            .take_while(|c| *c == ' ' || *c == '\t')
+            .count();
         assert!(indent2 > indent1 || lines2[0].contains("◦")); // Either more indent or different bullet
     }
 

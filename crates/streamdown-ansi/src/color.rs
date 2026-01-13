@@ -276,10 +276,7 @@ mod tests {
 
     #[test]
     fn test_ansi2hex_with_escape() {
-        assert_eq!(
-            ansi2hex("\x1b[38;2;255;0;0m"),
-            Some("#ff0000".to_string())
-        );
+        assert_eq!(ansi2hex("\x1b[38;2;255;0;0m"), Some("#ff0000".to_string()));
     }
 
     #[test]

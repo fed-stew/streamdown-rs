@@ -158,7 +158,11 @@ pub fn text_wrap(
         } else if word_visible_len > 0 {
             // Word doesn't fit, finalize current line
             if !current_line.is_empty() {
-                let prefix = if lines.is_empty() { first_prefix } else { next_prefix };
+                let prefix = if lines.is_empty() {
+                    first_prefix
+                } else {
+                    next_prefix
+                };
                 let mut line_content = format!("{}{}", prefix, current_line);
 
                 // Force truncate if needed
@@ -195,7 +199,13 @@ pub fn text_wrap(
         }
 
         // Update style tracking
-        for code in codes.iter().skip(if word.starts_with(&codes.get(0).cloned().unwrap_or_default()) { 1 } else { 0 }) {
+        for code in codes.iter().skip(
+            if word.starts_with(&codes.first().cloned().unwrap_or_default()) {
+                1
+            } else {
+                0
+            },
+        ) {
             current_style.push(code.clone());
         }
         current_style = ansi_collapse(&current_style, "");
@@ -205,7 +215,11 @@ pub fn text_wrap(
 
     // Don't forget the last line
     if !current_line.is_empty() && !visible(&current_line).trim().is_empty() {
-        let prefix = if lines.is_empty() { first_prefix } else { next_prefix };
+        let prefix = if lines.is_empty() {
+            first_prefix
+        } else {
+            next_prefix
+        };
         let mut line_content = format!("{}{}", prefix, current_line);
 
         if force_truncate {

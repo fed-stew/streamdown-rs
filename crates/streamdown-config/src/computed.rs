@@ -138,8 +138,8 @@ impl ComputedStyle {
         let codepad = if config.pretty_pad {
             // Use box drawing characters for pretty padding
             (
-                format!("{}▌\x1b[0m", grey_fg),  // Left half block
-                format!("{}▐\x1b[0m", grey_fg),  // Right half block
+                format!("{}▌\x1b[0m", grey_fg), // Left half block
+                format!("{}▐\x1b[0m", grey_fg), // Right half block
             )
         } else {
             (String::new(), String::new())
@@ -209,10 +209,7 @@ impl ComputedStyle {
         if !left.is_empty() {
             format!(
                 "{}{}─{}{}\x1b[0m",
-                left,
-                self.dark_bg,
-                lang_display,
-                "\x1b[0m"
+                left, self.dark_bg, lang_display, "\x1b[0m"
             )
         } else {
             format!("{}{}", self.dark_bg, "─".repeat(inner_width))

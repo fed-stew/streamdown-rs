@@ -189,7 +189,10 @@ mod tests {
 
     #[test]
     fn test_sanitize_for_terminal_removes_escape() {
-        assert_eq!(sanitize_for_terminal("Hello\x1b[31mWorld"), "Hello[31mWorld");
+        assert_eq!(
+            sanitize_for_terminal("Hello\x1b[31mWorld"),
+            "Hello[31mWorld"
+        );
     }
 
     #[test]

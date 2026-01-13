@@ -36,8 +36,8 @@ pub mod text;
 
 pub use code::{code_wrap, CodeBlockState, CODEPAD_BOTTOM, CODEPAD_TOP};
 pub use features::{
-    copy_to_clipboard, is_tty, savebrace, savebrace_clear, savebrace_last,
-    savebrace_path, savebrace_read, terminal_size, terminal_width, RenderFeatures,
+    copy_to_clipboard, is_tty, savebrace, savebrace_clear, savebrace_last, savebrace_path,
+    savebrace_read, terminal_size, terminal_width, RenderFeatures,
 };
 pub use heading::render_heading;
 pub use list::{render_list_item, ListState, BULLETS};
@@ -47,8 +47,8 @@ pub use text::{simple_wrap, split_text, text_wrap, WrappedText};
 use std::io::Write;
 
 use streamdown_ansi::codes::{
-    BOLD_OFF, BOLD_ON, DIM_ON, ITALIC_OFF, ITALIC_ON, RESET,
-    STRIKEOUT_OFF, STRIKEOUT_ON, UNDERLINE_OFF, UNDERLINE_ON,
+    BOLD_OFF, BOLD_ON, DIM_ON, ITALIC_OFF, ITALIC_ON, RESET, STRIKEOUT_OFF, STRIKEOUT_ON,
+    UNDERLINE_OFF, UNDERLINE_ON,
 };
 use streamdown_ansi::color::hex2rgb;
 
@@ -96,13 +96,13 @@ pub struct RenderStyle {
 impl Default for RenderStyle {
     fn default() -> Self {
         Self {
-            bright: "#87ceeb".to_string(),  // Sky blue
-            head: "#98fb98".to_string(),    // Pale green
-            symbol: "#dda0dd".to_string(),  // Plum
-            grey: "#808080".to_string(),    // Grey
-            dark: "#1a1a2e".to_string(),    // Dark blue-grey
-            mid: "#2d2d44".to_string(),     // Mid blue-grey
-            light: "#3d3d5c".to_string(),   // Light blue-grey
+            bright: "#87ceeb".to_string(), // Sky blue
+            head: "#98fb98".to_string(),   // Pale green
+            symbol: "#dda0dd".to_string(), // Plum
+            grey: "#808080".to_string(),   // Grey
+            dark: "#1a1a2e".to_string(),   // Dark blue-grey
+            mid: "#2d2d44".to_string(),    // Mid blue-grey
+            light: "#3d3d5c".to_string(),  // Light blue-grey
         }
     }
 }
@@ -285,7 +285,10 @@ impl<W: Write> Renderer<W> {
             }
 
             ParseEvent::BoldItalic(text) => {
-                self.write(&format!("{}{}{}{}{}", BOLD_ON, ITALIC_ON, text, ITALIC_OFF, BOLD_OFF))?;
+                self.write(&format!(
+                    "{}{}{}{}{}",
+                    BOLD_ON, ITALIC_ON, text, ITALIC_OFF, BOLD_OFF
+                ))?;
             }
 
             ParseEvent::Underline(text) => {
@@ -369,13 +372,17 @@ impl<W: Write> Renderer<W> {
                 // Render with background
                 let bg = bg_color(&self.style.dark);
                 let margin = self.left_margin();
-                let padding_needed = self.current_width().saturating_sub(
-                    streamdown_ansi::utils::visible_length(&highlighted)
-                );
+                let padding_needed = self
+                    .current_width()
+                    .saturating_sub(streamdown_ansi::utils::visible_length(&highlighted));
 
                 self.writeln(&format!(
                     "{}{}{}{}{}",
-                    margin, bg, highlighted.trim_end(), " ".repeat(padding_needed), RESET
+                    margin,
+                    bg,
+                    highlighted.trim_end(),
+                    " ".repeat(padding_needed),
+                    RESET
                 ))?;
             }
 
@@ -404,7 +411,11 @@ impl<W: Write> Renderer<W> {
                 self.code_buffer.clear();
             }
 
-            ParseEvent::ListItem { indent, bullet, content } => {
+            ParseEvent::ListItem {
+                indent,
+                bullet,
+                content,
+            } => {
                 let lines = render_list_item(
                     *indent,
                     bullet,
@@ -430,14 +441,8 @@ impl<W: Write> Renderer<W> {
                 let width = self.current_width();
                 let margin = self.left_margin();
                 let style = self.style.clone();
-                let lines = render_table_row(
-                    cells,
-                    &mut self.table_state,
-                    width,
-                    &margin,
-                    &style,
-                    false,
-                );
+                let lines =
+                    render_table_row(cells, &mut self.table_state, width, &margin, &style, false);
                 for line in lines {
                     self.writeln(&line)?;
                 }
@@ -447,14 +452,8 @@ impl<W: Write> Renderer<W> {
                 let width = self.current_width();
                 let margin = self.left_margin();
                 let style = self.style.clone();
-                let lines = render_table_row(
-                    cells,
-                    &mut self.table_state,
-                    width,
-                    &margin,
-                    &style,
-                    false,
-                );
+                let lines =
+                    render_table_row(cells, &mut self.table_state, width, &margin, &style, false);
                 for line in lines {
                     self.writeln(&line)?;
                 }
@@ -555,9 +554,10 @@ impl<W: Write> Renderer<W> {
             InlineElement::Text(s) => self.write(s)?,
             InlineElement::Bold(s) => self.write(&format!("{}{}{}", BOLD_ON, s, BOLD_OFF))?,
             InlineElement::Italic(s) => self.write(&format!("{}{}{}", ITALIC_ON, s, ITALIC_OFF))?,
-            InlineElement::BoldItalic(s) => {
-                self.write(&format!("{}{}{}{}{}", BOLD_ON, ITALIC_ON, s, ITALIC_OFF, BOLD_OFF))?
-            }
+            InlineElement::BoldItalic(s) => self.write(&format!(
+                "{}{}{}{}{}",
+                BOLD_ON, ITALIC_ON, s, ITALIC_OFF, BOLD_OFF
+            ))?,
             InlineElement::Underline(s) => {
                 self.write(&format!("{}{}{}", UNDERLINE_ON, s, UNDERLINE_OFF))?
             }
@@ -813,8 +813,10 @@ mod tests {
 
     #[test]
     fn test_render_with_custom_style() {
-        let mut style = RenderStyle::default();
-        style.bright = "#ff0000".to_string();
+        let style = RenderStyle {
+            bright: "#ff0000".to_string(),
+            ..Default::default()
+        };
 
         let mut output = Vec::new();
         let mut renderer = Renderer::with_style(&mut output, 80, style);

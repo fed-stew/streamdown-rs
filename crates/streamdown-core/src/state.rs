@@ -364,11 +364,7 @@ impl ParseState {
         let block_offset = self.block_depth * 2;
 
         // Subtract list indentation if requested
-        let list_offset = if listwidth {
-            self.list_indent_text
-        } else {
-            0
-        };
+        let list_offset = if listwidth { self.list_indent_text } else { 0 };
 
         base.saturating_sub(block_offset + list_offset)
     }

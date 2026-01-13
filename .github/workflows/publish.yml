@@ -1,0 +1,110 @@
+name: Publish to crates.io
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags like v0.1.3, v1.0.0, etc.
+  workflow_dispatch:  # Allow manual triggering for testing
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  # First, make sure everything builds and tests pass
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache cargo registry & build
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Build all crates
+        run: cargo build --workspace --release
+
+      - name: Run tests
+        run: cargo test --workspace
+
+  # Publish all crates to crates.io in dependency order
+  publish:
+    name: Publish to crates.io
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: Swatinem/rust-cache@v2
+
+      # Publish crates in dependency order with delays for crates.io indexing
+      # Order: core -> ansi -> config -> syntax -> parser -> plugin -> render -> main
+      
+      - name: Publish streamdown-core
+        run: cargo publish -p streamdown-core --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        continue-on-error: true  # Skip if already published
+
+      - name: Wait for crates.io indexing
+        run: sleep 30
+
+      - name: Publish streamdown-ansi
+        run: cargo publish -p streamdown-ansi --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        continue-on-error: true
+
+      - name: Wait for crates.io indexing
+        run: sleep 30
+
+      - name: Publish streamdown-config
+        run: cargo publish -p streamdown-config --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        continue-on-error: true
+
+      - name: Wait for crates.io indexing
+        run: sleep 30
+
+      - name: Publish streamdown-syntax
+        run: cargo publish -p streamdown-syntax --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        continue-on-error: true
+
+      - name: Wait for crates.io indexing
+        run: sleep 30
+
+      - name: Publish streamdown-parser
+        run: cargo publish -p streamdown-parser --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        continue-on-error: true
+
+      - name: Wait for crates.io indexing
+        run: sleep 30
+
+      - name: Publish streamdown-plugin
+        run: cargo publish -p streamdown-plugin --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        continue-on-error: true
+
+      - name: Wait for crates.io indexing
+        run: sleep 30
+
+      - name: Publish streamdown-render
+        run: cargo publish -p streamdown-render --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        continue-on-error: true
+
+      - name: Wait for crates.io indexing
+        run: sleep 30
+
+      - name: Publish streamdown (main crate)
+        run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}

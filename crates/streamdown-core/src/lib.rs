@@ -11,12 +11,12 @@
 //! - [`StreamdownError`] - Error types
 //! - [`Position`], [`Span`] - Source location types
 
-pub mod error;
 pub mod enums;
+pub mod error;
 pub mod state;
 pub mod types;
 
-pub use error::{Result, StreamdownError};
 pub use enums::{BlockType, Code, EmitFlag, ListType, TableState};
+pub use error::{Result, StreamdownError};
 pub use state::{InlineState, ParseState};
 pub use types::{Position, Span};

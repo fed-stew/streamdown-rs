@@ -179,9 +179,7 @@ mod tests {
 
     #[test]
     fn test_style_builder() {
-        let style = Style::new()
-            .bold()
-            .fg(Color::Rgb { r: 255, g: 0, b: 0 });
+        let style = Style::new().bold().fg(Color::Rgb { r: 255, g: 0, b: 0 });
 
         let ansi = style.to_ansi();
         assert!(ansi.contains("1")); // bold

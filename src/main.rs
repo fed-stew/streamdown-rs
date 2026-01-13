@@ -13,7 +13,6 @@ use std::fs::File;
 use std::io::{self, BufRead, BufReader, Write};
 use std::path::Path;
 
-
 use streamdown_config::{ComputedStyle, Config};
 use streamdown_parser::{ParseEvent, Parser as MarkdownParser};
 use streamdown_plugin::PluginManager;
@@ -130,27 +129,25 @@ fn load_config(cli: &Cli) -> io::Result<Config> {
 
 /// Create render features from CLI options.
 fn create_features(cli: &Cli) -> RenderFeatures {
-    let mut features = RenderFeatures::default();
+    let (fixed_width, width_wrap) = if cli.width > 0 {
+        (Some(cli.width as usize), false)
+    } else {
+        (None, true)
+    };
 
-    features.pretty_pad = !cli.no_pretty_pad;
-    features.pretty_broken = cli.pretty_broken;
-    features.clipboard = cli.clipboard;
-    features.savebrace = cli.savebrace;
-
-    if cli.width > 0 {
-        features.fixed_width = Some(cli.width as usize);
-        features.width_wrap = false;
+    RenderFeatures {
+        pretty_pad: !cli.no_pretty_pad,
+        pretty_broken: cli.pretty_broken,
+        clipboard: cli.clipboard,
+        savebrace: cli.savebrace,
+        fixed_width,
+        width_wrap,
+        ..Default::default()
     }
-
-    features
 }
 
 /// Process input from stdin.
-fn run_stdin(
-    cli: &Cli,
-    style: &ComputedStyle,
-    features: &RenderFeatures,
-) -> io::Result<()> {
+fn run_stdin(cli: &Cli, style: &ComputedStyle, features: &RenderFeatures) -> io::Result<()> {
     info!("Reading from stdin");
 
     let stdin = io::stdin();
@@ -209,11 +206,7 @@ fn run_stdin(
 }
 
 /// Process input files.
-fn run_files(
-    cli: &Cli,
-    style: &ComputedStyle,
-    features: &RenderFeatures,
-) -> io::Result<()> {
+fn run_files(cli: &Cli, style: &ComputedStyle, features: &RenderFeatures) -> io::Result<()> {
     let width = cli.effective_width();
     let render_style = RenderStyle::from_computed(style);
     let theme = cli.theme.clone();
@@ -290,8 +283,8 @@ fn run_exec(
     let no_highlight = cli.no_highlight;
 
     // Compile prompt regex
-    let prompt_regex = Regex::new(&cli.prompt)
-        .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
+    let prompt_regex =
+        Regex::new(&cli.prompt).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
 
     // Spawn PTY session
     let mut session = PtySession::spawn(exec_cmd)?;
@@ -327,7 +320,10 @@ fn run_exec(
                 }
 
                 // Also check for subprocess output if Both
-                if matches!(session.poll(Duration::ZERO), PollResult::Master | PollResult::Both) {
+                if matches!(
+                    session.poll(Duration::ZERO),
+                    PollResult::Master | PollResult::Both
+                ) {
                     process_master_output(
                         &mut session,
                         &mut line_buffer,
@@ -452,8 +448,7 @@ fn process_master_output(
                 }
 
                 // Check plugins
-                if let Some(plugin_output) =
-                    plugin_manager.process_line(&line, parse_state, style)
+                if let Some(plugin_output) = plugin_manager.process_line(&line, parse_state, style)
                 {
                     for output_line in plugin_output {
                         writeln!(output, "{}", output_line)?;
@@ -529,7 +524,11 @@ fn scrape_code(event: &ParseEvent, scrape_dir: &Path) -> io::Result<()> {
             let raw_ext = language.as_deref().unwrap_or("txt");
             // Sanitize extension to prevent path traversal attacks
             let ext = streamdown_ansi::sanitize::sanitize_extension(raw_ext);
-            let ext = if ext.is_empty() { "txt".to_string() } else { ext };
+            let ext = if ext.is_empty() {
+                "txt".to_string()
+            } else {
+                ext
+            };
             // Use modulo to prevent filename overflow with large counters
             let filename = format!("code_{:08}.{}", counter % 100_000_000, ext);
             let path = scrape_dir.join(&filename);
@@ -547,7 +546,10 @@ fn scrape_code(event: &ParseEvent, scrape_dir: &Path) -> io::Result<()> {
                 for entry in std::fs::read_dir(scrape_dir)? {
                     let entry = entry?;
                     let name = entry.file_name();
-                    if name.to_string_lossy().starts_with(&format!("code_{:08}", (counter - 1) % 100_000_000)) {
+                    if name
+                        .to_string_lossy()
+                        .starts_with(&format!("code_{:08}", (counter - 1) % 100_000_000))
+                    {
                         let mut file = std::fs::OpenOptions::new()
                             .append(true)
                             .open(entry.path())?;

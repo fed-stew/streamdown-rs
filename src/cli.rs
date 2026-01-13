@@ -125,9 +125,9 @@ pub fn show_paths() {
     let config_path = Config::config_path()
         .map(|p| p.display().to_string())
         .unwrap_or_else(|| "(not found)".to_string());
-    let log_dir = std::env::temp_dir().join("sd").join(
-        std::env::var("UID").unwrap_or_else(|_| "unknown".to_string())
-    );
+    let log_dir = std::env::temp_dir()
+        .join("sd")
+        .join(std::env::var("UID").unwrap_or_else(|_| "unknown".to_string()));
 
     println!("paths:");
     println!("  config                {}", config_path);
@@ -158,8 +158,10 @@ mod tests {
     fn test_cli_parse_with_options() {
         let cli = Cli::parse_from([
             "sd",
-            "-w", "100",
-            "-l", "debug",
+            "-w",
+            "100",
+            "-l",
+            "debug",
             "--clipboard",
             "--savebrace",
             "file.md",
@@ -172,11 +174,7 @@ mod tests {
 
     #[test]
     fn test_cli_parse_exec() {
-        let cli = Cli::parse_from([
-            "sd",
-            "-e", "ollama run llama3",
-            "-p", ">>> ",
-        ]);
+        let cli = Cli::parse_from(["sd", "-e", "ollama run llama3", "-p", ">>> "]);
         assert_eq!(cli.exec_cmd, Some("ollama run llama3".to_string()));
         assert_eq!(cli.prompt, ">>> ");
     }

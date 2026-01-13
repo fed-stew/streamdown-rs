@@ -138,8 +138,9 @@ impl Config {
     /// assert!(path.exists());
     /// ```
     pub fn ensure_config_file() -> Result<PathBuf> {
-        let config_dir = Self::config_dir()
-            .ok_or_else(|| StreamdownError::Config("Could not determine config directory".into()))?;
+        let config_dir = Self::config_dir().ok_or_else(|| {
+            StreamdownError::Config("Could not determine config directory".into())
+        })?;
 
         // Create directory if it doesn't exist
         std::fs::create_dir_all(&config_dir)?;
@@ -192,8 +193,9 @@ impl Config {
     /// ```
     pub fn load_from(path: &Path) -> Result<Self> {
         let content = std::fs::read_to_string(path)?;
-        toml::from_str(&content)
-            .map_err(|e| StreamdownError::Config(format!("Parse error in {}: {}", path.display(), e)))
+        toml::from_str(&content).map_err(|e| {
+            StreamdownError::Config(format!("Parse error in {}: {}", path.display(), e))
+        })
     }
 
     /// Load configuration with an optional override file or string.

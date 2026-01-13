@@ -25,8 +25,7 @@ static ESCAPE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(ESCAPE).unwrap()
 static ANSIESCAPE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(ANSIESCAPE).unwrap());
 
 /// Compiled regex for splitting text into ANSI/non-ANSI segments.
-static SPLIT_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(\x1b[^m]*m|[^\x1b]+)").unwrap());
+static SPLIT_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(\x1b[^m]*m|[^\x1b]+)").unwrap());
 
 /// Remove all ANSI escape sequences from text.
 ///
@@ -192,10 +191,7 @@ pub fn parse_sgr_params(code: &str) -> Vec<u32> {
         return vec![0]; // Reset
     }
 
-    inner
-        .split(';')
-        .filter_map(|s| s.parse().ok())
-        .collect()
+    inner.split(';').filter_map(|s| s.parse().ok()).collect()
 }
 
 /// Collapse redundant ANSI codes in a sequence.
@@ -456,15 +452,15 @@ mod tests {
     fn test_parse_sgr_params() {
         assert_eq!(parse_sgr_params("\x1b[1m"), vec![1]);
         assert_eq!(parse_sgr_params("\x1b[1;4m"), vec![1, 4]);
-        assert_eq!(parse_sgr_params("\x1b[38;2;255;0;0m"), vec![38, 2, 255, 0, 0]);
+        assert_eq!(
+            parse_sgr_params("\x1b[38;2;255;0;0m"),
+            vec![38, 2, 255, 0, 0]
+        );
     }
 
     #[test]
     fn test_ansi_collapse_removes_duplicates() {
-        let codes = vec![
-            "\x1b[1m".to_string(),
-            "\x1b[1m".to_string(),
-        ];
+        let codes = vec!["\x1b[1m".to_string(), "\x1b[1m".to_string()];
         let collapsed = ansi_collapse(&codes, "");
         assert_eq!(collapsed.len(), 1);
         assert!(collapsed[0].contains("1")); // Bold

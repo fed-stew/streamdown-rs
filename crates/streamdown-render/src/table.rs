@@ -146,7 +146,11 @@ pub fn render_table_row(
         let mut line_parts = Vec::with_capacity(num_cols);
 
         for (col_idx, cell_lines) in wrapped_cells.iter().enumerate() {
-            let col_width = state.column_widths.get(col_idx).copied().unwrap_or(MIN_COL_WIDTH);
+            let col_width = state
+                .column_widths
+                .get(col_idx)
+                .copied()
+                .unwrap_or(MIN_COL_WIDTH);
             let content = cell_lines.get(row_idx).cloned().unwrap_or_default();
             let content_len = visible_length(&content);
             let padding = col_width.saturating_sub(content_len);
@@ -180,7 +184,13 @@ pub fn render_table_separator(
         state.total_width()
     };
 
-    format!("{}{}{}{}", left_margin, fg, "─".repeat(separator_width), RESET)
+    format!(
+        "{}{}{}{}",
+        left_margin,
+        fg,
+        "─".repeat(separator_width),
+        RESET
+    )
 }
 
 #[cfg(test)]

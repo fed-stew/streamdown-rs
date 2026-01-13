@@ -4,7 +4,7 @@
 //! from the Python Streamdown project to ensure feature parity.
 
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use streamdown_parser::{ParseEvent, Parser};
 use streamdown_render::{RenderStyle, Renderer};
@@ -239,9 +239,7 @@ fn test_links_md() {
     assert!(!events.is_empty());
 
     // Should have link events
-    let has_link = events
-        .iter()
-        .any(|e| matches!(e, ParseEvent::Link { .. }));
+    let _has_link = events.iter().any(|e| matches!(e, ParseEvent::Link { .. }));
     // Links might be in inline content, so we check the output instead
 
     let output = render_to_string(&content, 80);
@@ -357,10 +355,10 @@ fn test_broken_code_md() {
     let content = content.unwrap();
 
     // Should handle broken/malformed code blocks gracefully
-    let events = parse_document(&content);
+    let _events = parse_document(&content);
     // No assertions on events - just shouldn't panic
 
-    let output = render_to_string(&content, 80);
+    let _output = render_to_string(&content, 80);
     // Just shouldn't panic
 }
 
@@ -404,7 +402,7 @@ fn test_line_wrap_md() {
 #[test]
 fn test_empty_lines() {
     let content = "\n\n\n";
-    let events = parse_document(content);
+    let _events = parse_document(content);
     // Empty lines should produce empty line events
 }
 
@@ -472,9 +470,15 @@ def hello():
     assert!(!output.is_empty());
 
     // Check we have various event types
-    let has_heading = events.iter().any(|e| matches!(e, ParseEvent::Heading { .. }));
-    let has_code = events.iter().any(|e| matches!(e, ParseEvent::CodeBlockStart { .. }));
-    let has_list = events.iter().any(|e| matches!(e, ParseEvent::ListItem { .. }));
+    let has_heading = events
+        .iter()
+        .any(|e| matches!(e, ParseEvent::Heading { .. }));
+    let has_code = events
+        .iter()
+        .any(|e| matches!(e, ParseEvent::CodeBlockStart { .. }));
+    let has_list = events
+        .iter()
+        .any(|e| matches!(e, ParseEvent::ListItem { .. }));
 
     assert!(has_heading);
     assert!(has_code);
@@ -539,7 +543,8 @@ fn test_render_with_custom_style() {
 
 #[test]
 fn test_render_at_different_widths() {
-    let content = "This is a paragraph that should wrap at different widths based on the terminal size.";
+    let content =
+        "This is a paragraph that should wrap at different widths based on the terminal size.";
 
     for width in [20, 40, 60, 80, 120] {
         let output = render_to_string(content, width);
@@ -575,7 +580,7 @@ fn test_latex_inline() {
 fn test_latex_plugin_integration() {
     use streamdown_config::ComputedStyle;
     use streamdown_core::state::ParseState;
-    use streamdown_plugin::{Plugin, PluginManager, ProcessResult};
+    use streamdown_plugin::PluginManager;
 
     let mut manager = PluginManager::with_builtins();
     let state = ParseState::new();
@@ -615,7 +620,7 @@ fn test_config_toml_roundtrip() {
     let toml_str = Config::default_toml();
 
     // Should be valid TOML
-    let parsed: Config = toml::from_str(&toml_str).unwrap();
+    let parsed: Config = toml::from_str(toml_str).unwrap();
 
     // Computed styles should match
     let orig_style = original.computed_style();

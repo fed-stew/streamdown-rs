@@ -20,15 +20,17 @@ fn text_line() -> impl Strategy<Value = String> {
 
 /// Generate a heading.
 fn heading() -> impl Strategy<Value = String> {
-    (1..=6usize, text_line()).prop_map(|(level, text)| {
-        format!("{} {}", "#".repeat(level), text)
-    })
+    (1..=6usize, text_line()).prop_map(|(level, text)| format!("{} {}", "#".repeat(level), text))
 }
 
 /// Generate a code block.
 fn code_block() -> impl Strategy<Value = String> {
     (text_line(), prop::collection::vec(text_line(), 0..10)).prop_map(|(lang, lines)| {
-        let lang = if lang.is_empty() { String::new() } else { lang.split_whitespace().next().unwrap_or("").to_string() };
+        let lang = if lang.is_empty() {
+            String::new()
+        } else {
+            lang.split_whitespace().next().unwrap_or("").to_string()
+        };
         format!("```{}\n{}\n```", lang, lines.join("\n"))
     })
 }
@@ -36,7 +38,11 @@ fn code_block() -> impl Strategy<Value = String> {
 /// Generate a list.
 fn list() -> impl Strategy<Value = String> {
     prop::collection::vec(text_line(), 1..10).prop_map(|items| {
-        items.iter().map(|item| format!("- {}", item)).collect::<Vec<_>>().join("\n")
+        items
+            .iter()
+            .map(|item| format!("- {}", item))
+            .collect::<Vec<_>>()
+            .join("\n")
     })
 }
 
@@ -58,7 +64,7 @@ proptest! {
     #[test]
     fn parser_handles_text(line in text_line()) {
         let mut parser = Parser::new();
-        let events = parser.parse_line(&line);
+        let _events = parser.parse_line(&line);
         // Should produce at least one event for non-empty lines
         if !line.trim().is_empty() {
             // May or may not produce events depending on content
@@ -69,7 +75,7 @@ proptest! {
     #[test]
     fn parser_handles_headings(h in heading()) {
         let mut parser = Parser::new();
-        let events = parser.parse_line(&h);
+        let _events = parser.parse_line(&h);
         // Should produce heading event for valid headings
     }
 
@@ -148,7 +154,7 @@ proptest! {
         }
 
         // Should not panic and produce output
-        let result = String::from_utf8(output).unwrap();
+        let _result = String::from_utf8(output).unwrap();
         // Output can be empty for empty input
     }
 }
@@ -176,7 +182,7 @@ proptest! {
         let visible = streamdown_ansi::utils::visible(&input);
         // The visible string might be longer if we add escape sequences,
         // but the visible length should be <= input length
-        let vis_len = streamdown_ansi::utils::visible_length(&visible);
+        let _vis_len = streamdown_ansi::utils::visible_length(&visible);
         // Actually visible can contain the original chars, so length can vary
     }
 }
@@ -219,9 +225,9 @@ proptest! {
 
         let (r, g, b) = hsv_to_rgb(h, s, v);
 
-        prop_assert!(r <= 255);
-        prop_assert!(g <= 255);
-        prop_assert!(b <= 255);
+        // Values are u8 so they're always valid (0-255)
+        // Just verify we got a result without panicking
+        let _ = (r, g, b);
     }
 
     /// Hex parsing should handle valid hex colors.

@@ -14,10 +14,10 @@
 
 use crate::{Plugin, ProcessResult};
 use regex::Regex;
-use streamdown_config::ComputedStyle;
-use streamdown_core::state::ParseState;
 use std::collections::HashMap;
 use std::sync::LazyLock;
+use streamdown_config::ComputedStyle;
+use streamdown_core::state::ParseState;
 
 /// LaTeX plugin for converting math to Unicode.
 pub struct LatexPlugin {
@@ -135,8 +135,7 @@ impl Plugin for LatexPlugin {
 
 /// Convert inline math ($...$) in a line.
 fn convert_inline_math(line: &str) -> String {
-    static INLINE_RE: LazyLock<Regex> =
-        LazyLock::new(|| Regex::new(r"\$([^$]+)\$").unwrap());
+    static INLINE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\$([^$]+)\$").unwrap());
 
     INLINE_RE
         .replace_all(line, |caps: &regex::Captures| latex_to_unicode(&caps[1]))
@@ -400,8 +399,7 @@ static SUPERSCRIPT_CHARS: LazyLock<HashMap<char, char>> = LazyLock::new(|| {
 
 /// Convert LaTeX commands (\alpha, \sum, etc.).
 fn convert_commands(input: &str) -> String {
-    static CMD_RE: LazyLock<Regex> =
-        LazyLock::new(|| Regex::new(r"\\([a-zA-Z]+)").unwrap());
+    static CMD_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\\([a-zA-Z]+)").unwrap());
 
     CMD_RE
         .replace_all(input, |caps: &regex::Captures| {
@@ -444,8 +442,7 @@ fn convert_fractions(input: &str) -> String {
 /// Convert subscripts x_1 → x₁, x_{10} → x₁₀.
 fn convert_subscripts(input: &str) -> String {
     // First handle braced subscripts: x_{abc}
-    static BRACED_SUB_RE: LazyLock<Regex> =
-        LazyLock::new(|| Regex::new(r"_\{([^}]+)\}").unwrap());
+    static BRACED_SUB_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"_\{([^}]+)\}").unwrap());
 
     let result = BRACED_SUB_RE
         .replace_all(input, |caps: &regex::Captures| {
@@ -455,13 +452,15 @@ fn convert_subscripts(input: &str) -> String {
         .to_string();
 
     // Then handle single-char subscripts: x_1
-    static SINGLE_SUB_RE: LazyLock<Regex> =
-        LazyLock::new(|| Regex::new(r"_([0-9a-z])").unwrap());
+    static SINGLE_SUB_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"_([0-9a-z])").unwrap());
 
     SINGLE_SUB_RE
         .replace_all(&result, |caps: &regex::Captures| {
             let c = caps[1].chars().next().unwrap();
-            SUBSCRIPT_DIGITS.get(&c).map(|&s| s.to_string()).unwrap_or_else(|| format!("_{}", c))
+            SUBSCRIPT_DIGITS
+                .get(&c)
+                .map(|&s| s.to_string())
+                .unwrap_or_else(|| format!("_{}", c))
         })
         .to_string()
 }
@@ -469,8 +468,7 @@ fn convert_subscripts(input: &str) -> String {
 /// Convert superscripts x^2 → x², x^{10} → x¹⁰.
 fn convert_superscripts(input: &str) -> String {
     // First handle braced superscripts: x^{abc}
-    static BRACED_SUP_RE: LazyLock<Regex> =
-        LazyLock::new(|| Regex::new(r"\^\{([^}]+)\}").unwrap());
+    static BRACED_SUP_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\^\{([^}]+)\}").unwrap());
 
     let result = BRACED_SUP_RE
         .replace_all(input, |caps: &regex::Captures| {
@@ -480,13 +478,15 @@ fn convert_superscripts(input: &str) -> String {
         .to_string();
 
     // Then handle single-char superscripts: x^2
-    static SINGLE_SUP_RE: LazyLock<Regex> =
-        LazyLock::new(|| Regex::new(r"\^([0-9a-z])").unwrap());
+    static SINGLE_SUP_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\^([0-9a-z])").unwrap());
 
     SINGLE_SUP_RE
         .replace_all(&result, |caps: &regex::Captures| {
             let c = caps[1].chars().next().unwrap();
-            SUPERSCRIPT_CHARS.get(&c).map(|&s| s.to_string()).unwrap_or_else(|| format!("^{}", c))
+            SUPERSCRIPT_CHARS
+                .get(&c)
+                .map(|&s| s.to_string())
+                .unwrap_or_else(|| format!("^{}", c))
         })
         .to_string()
 }
@@ -579,7 +579,7 @@ mod tests {
         let input = r"\sum_{i=1}^n x_i";
         let result = latex_to_unicode(input);
         assert!(result.contains("Σ")); // Sum symbol
-        // Subscripts should be converted
+                                       // Subscripts should be converted
         assert!(result.contains("ᵢ") || result.contains("i")); // Subscript i or regular i
     }
 

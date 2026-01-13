@@ -51,12 +51,10 @@ static CODE_FENCE_END_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^\s*(```+|~~~+|</pre>)\s*$").unwrap());
 
 /// Regex for space-indented code (4+ spaces, not starting with * for lists)
-static SPACE_CODE_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^    \s*[^\s*]").unwrap());
+static SPACE_CODE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^    \s*[^\s*]").unwrap());
 
 /// Regex for headings
-static HEADING_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^(#{1,6})\s+(.*)$").unwrap());
+static HEADING_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(#{1,6})\s+(.*)$").unwrap());
 
 /// Regex for list items: handles -, *, +, +---, and 1. style
 static LIST_ITEM_RE: LazyLock<Regex> =
@@ -67,16 +65,13 @@ static BLOCK_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^\s*((>\s*)+|[◁<].?think[>▷]|</?.?think[>▷]?)(.*)$").unwrap());
 
 /// Regex for horizontal rules
-static HR_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^(---+|\*\*\*+|___+)\s*$").unwrap());
+static HR_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(---+|\*\*\*+|___+)\s*$").unwrap());
 
 /// Regex for table rows
-static TABLE_ROW_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*\|(.+)\|\s*$").unwrap());
+static TABLE_ROW_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*\|(.+)\|\s*$").unwrap());
 
 /// Regex for table separator (only contains |, -, :, spaces)
-static TABLE_SEP_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[\s|:-]+$").unwrap());
+static TABLE_SEP_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[\s|:-]+$").unwrap());
 
 // =============================================================================
 // Types
@@ -142,22 +137,40 @@ pub enum ParseEvent {
     Underline(String),
     Strikeout(String),
     BoldItalic(String),
-    Link { text: String, url: String },
-    Image { alt: String, url: String },
+    Link {
+        text: String,
+        url: String,
+    },
+    Image {
+        alt: String,
+        url: String,
+    },
     Footnote(String),
 
     // === Block-level elements ===
-    Heading { level: u8, content: String },
-    CodeBlockStart { language: Option<String>, indent: usize },
+    Heading {
+        level: u8,
+        content: String,
+    },
+    CodeBlockStart {
+        language: Option<String>,
+        indent: usize,
+    },
     CodeBlockLine(String),
     CodeBlockEnd,
-    ListItem { indent: usize, bullet: ListBullet, content: String },
+    ListItem {
+        indent: usize,
+        bullet: ListBullet,
+        content: String,
+    },
     ListEnd,
     TableHeader(Vec<String>),
     TableRow(Vec<String>),
     TableSeparator,
     TableEnd,
-    BlockquoteStart { depth: usize },
+    BlockquoteStart {
+        depth: usize,
+    },
     BlockquoteLine(String),
     BlockquoteEnd,
     ThinkBlockStart,
@@ -240,8 +253,12 @@ impl Parser {
         }
     }
 
-    pub fn state(&self) -> &ParseState { &self.state }
-    pub fn state_mut(&mut self) -> &mut ParseState { &mut self.state }
+    pub fn state(&self) -> &ParseState {
+        &self.state
+    }
+    pub fn state_mut(&mut self) -> &mut ParseState {
+        &mut self.state
+    }
 
     pub fn set_process_links(&mut self, enabled: bool) {
         self.state.links = enabled;
@@ -286,18 +303,32 @@ impl Parser {
 
         // Check for space-indented code BEFORE first-indent stripping
         // (so we don't accidentally strip the 4-space indent)
-        if self.try_parse_space_code(line, was_prev_empty) { return self.take_events(); }
+        if self.try_parse_space_code(line, was_prev_empty) {
+            return self.take_events();
+        }
 
         // Now apply first-indent stripping for other constructs
         let line = self.strip_first_indent(line);
 
         // Try block-level constructs in order
-        if self.try_parse_code_fence(&line) { return self.take_events(); }
-        if self.try_parse_block(&line) { return self.take_events(); }
-        if self.try_parse_heading(&line) { return self.take_events(); }
-        if self.try_parse_hr(&line) { return self.take_events(); }
-        if self.try_parse_list_item(&line) { return self.take_events(); }
-        if self.try_parse_table(&line) { return self.take_events(); }
+        if self.try_parse_code_fence(&line) {
+            return self.take_events();
+        }
+        if self.try_parse_block(&line) {
+            return self.take_events();
+        }
+        if self.try_parse_heading(&line) {
+            return self.take_events();
+        }
+        if self.try_parse_hr(&line) {
+            return self.take_events();
+        }
+        if self.try_parse_list_item(&line) {
+            return self.take_events();
+        }
+        if self.try_parse_table(&line) {
+            return self.take_events();
+        }
 
         // Exit special contexts for plain text
         self.exit_block_contexts();
@@ -437,7 +468,8 @@ impl Parser {
             self.state.code_indent = indent;
             self.state.enter_code_block(
                 Code::Backtick,
-                lang.map(|s| s.to_string()).or_else(|| Some("text".to_string())),
+                lang.map(|s| s.to_string())
+                    .or_else(|| Some("text".to_string())),
             );
 
             self.events.push(ParseEvent::CodeBlockStart {
@@ -462,7 +494,8 @@ impl Parser {
         }
 
         if SPACE_CODE_RE.is_match(line) {
-            self.state.enter_code_block(Code::Spaces, Some("text".to_string()));
+            self.state
+                .enter_code_block(Code::Spaces, Some("text".to_string()));
             self.events.push(ParseEvent::CodeBlockStart {
                 language: Some("text".to_string()),
                 indent: 4,
@@ -482,11 +515,13 @@ impl Parser {
 
     fn parse_in_think_block(&mut self, line: &str) {
         // Check for end of think block (various formats)
-        if line.trim() == "</think>" || line.trim() == "</think▷" || line.trim() == "◁/think▷" {
+        if line.trim() == "</think>" || line.trim() == "</think▷" || line.trim() == "◁/think▷"
+        {
             self.events.push(ParseEvent::ThinkBlockEnd);
             self.state.exit_block();
         } else {
-            self.events.push(ParseEvent::ThinkBlockLine(line.to_string()));
+            self.events
+                .push(ParseEvent::ThinkBlockLine(line.to_string()));
         }
     }
 
@@ -509,7 +544,8 @@ impl Parser {
                     self.state.enter_block(BlockType::Think);
                     self.events.push(ParseEvent::ThinkBlockStart);
                     if !content.trim().is_empty() {
-                        self.events.push(ParseEvent::ThinkBlockLine(content.to_string()));
+                        self.events
+                            .push(ParseEvent::ThinkBlockLine(content.to_string()));
                     }
                     return true;
                 }
@@ -530,7 +566,8 @@ impl Parser {
                         }
                     }
                 }
-                self.events.push(ParseEvent::BlockquoteLine(content.to_string()));
+                self.events
+                    .push(ParseEvent::BlockquoteLine(content.to_string()));
                 return true;
             }
         }
@@ -604,7 +641,10 @@ impl Parser {
             }
 
             // Push new level if indented further than current, or if stack is empty
-            let need_push = self.state.list_item_stack.last()
+            let need_push = self
+                .state
+                .list_item_stack
+                .last()
                 .map(|(i, _)| indent > *i)
                 .unwrap_or(true);
 
@@ -642,13 +682,11 @@ impl Parser {
             let inner = caps.get(1).map(|m| m.as_str()).unwrap_or("");
 
             // Check if this is a separator row
-            if TABLE_SEP_RE.is_match(inner) {
-                if self.table_state == Some(TableState::Header) {
-                    self.table_state = Some(TableState::Body);
-                    self.state.in_table = Some(Code::Body);
-                    self.events.push(ParseEvent::TableSeparator);
-                    return true;
-                }
+            if TABLE_SEP_RE.is_match(inner) && self.table_state == Some(TableState::Header) {
+                self.table_state = Some(TableState::Body);
+                self.state.in_table = Some(Code::Body);
+                self.events.push(ParseEvent::TableSeparator);
+                return true;
             }
 
             let cells: Vec<String> = inner.split('|').map(|s| s.trim().to_string()).collect();
@@ -781,9 +819,13 @@ mod tests {
     fn test_parse_code_block() {
         let mut parser = Parser::new();
         let e1 = parser.parse_line("```rust");
-        assert!(e1.iter().any(|e| matches!(e, ParseEvent::CodeBlockStart { language: Some(l), .. } if l == "rust")));
+        assert!(e1.iter().any(
+            |e| matches!(e, ParseEvent::CodeBlockStart { language: Some(l), .. } if l == "rust")
+        ));
         let e2 = parser.parse_line("let x = 1;");
-        assert!(e2.iter().any(|e| matches!(e, ParseEvent::CodeBlockLine(s) if s == "let x = 1;")));
+        assert!(e2
+            .iter()
+            .any(|e| matches!(e, ParseEvent::CodeBlockLine(s) if s == "let x = 1;")));
         let e3 = parser.parse_line("```");
         assert!(e3.iter().any(|e| matches!(e, ParseEvent::CodeBlockEnd)));
     }
@@ -792,7 +834,9 @@ mod tests {
     fn test_parse_pre_tag() {
         let mut parser = Parser::new();
         let e1 = parser.parse_line("<pre>");
-        assert!(e1.iter().any(|e| matches!(e, ParseEvent::CodeBlockStart { .. })));
+        assert!(e1
+            .iter()
+            .any(|e| matches!(e, ParseEvent::CodeBlockStart { .. })));
         let e2 = parser.parse_line("code");
         assert!(e2.iter().any(|e| matches!(e, ParseEvent::CodeBlockLine(_))));
         let e3 = parser.parse_line("</pre>");
@@ -805,8 +849,12 @@ mod tests {
         parser.set_code_spaces(true);
         parser.parse_line(""); // Empty line first
         let events = parser.parse_line("    let x = 1;");
-        assert!(events.iter().any(|e| matches!(e, ParseEvent::CodeBlockStart { .. })));
-        assert!(events.iter().any(|e| matches!(e, ParseEvent::CodeBlockLine(s) if s == "let x = 1;")));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ParseEvent::CodeBlockStart { .. })));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ParseEvent::CodeBlockLine(s) if s == "let x = 1;")));
     }
 
     #[test]
@@ -844,9 +892,9 @@ mod tests {
         parser.parse_line("- Item 1");
         let e2 = parser.parse_line("  - Nested");
         // Nested item should have indent 2
-        assert!(e2.iter().any(|e| matches!(
-            e, ParseEvent::ListItem { indent: 2, .. }
-        )));
+        assert!(e2
+            .iter()
+            .any(|e| matches!(e, ParseEvent::ListItem { indent: 2, .. })));
     }
 
     #[test]
@@ -856,7 +904,11 @@ mod tests {
         let e2 = parser.parse_line("2. Second");
         // Should auto-number
         assert!(e2.iter().any(|e| matches!(
-            e, ParseEvent::ListItem { bullet: ListBullet::Ordered(2), .. }
+            e,
+            ParseEvent::ListItem {
+                bullet: ListBullet::Ordered(2),
+                ..
+            }
         )));
     }
 
@@ -864,22 +916,35 @@ mod tests {
     fn test_parse_blockquote() {
         let mut parser = Parser::new();
         let events = parser.parse_line("> Quote text");
-        assert!(events.iter().any(|e| matches!(e, ParseEvent::BlockquoteLine(s) if s == "Quote text")));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ParseEvent::BlockquoteLine(s) if s == "Quote text")));
     }
 
     #[test]
     fn test_parse_nested_blockquote() {
         let mut parser = Parser::new();
         let events = parser.parse_line(">> Nested quote");
-        assert!(events.iter().any(|e| matches!(e, ParseEvent::BlockquoteStart { depth: 2 })));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ParseEvent::BlockquoteStart { depth: 2 })));
     }
 
     #[test]
     fn test_parse_hr() {
         let mut parser = Parser::new();
-        assert!(parser.parse_line("---").iter().any(|e| matches!(e, ParseEvent::HorizontalRule)));
-        assert!(parser.parse_line("***").iter().any(|e| matches!(e, ParseEvent::HorizontalRule)));
-        assert!(parser.parse_line("___").iter().any(|e| matches!(e, ParseEvent::HorizontalRule)));
+        assert!(parser
+            .parse_line("---")
+            .iter()
+            .any(|e| matches!(e, ParseEvent::HorizontalRule)));
+        assert!(parser
+            .parse_line("***")
+            .iter()
+            .any(|e| matches!(e, ParseEvent::HorizontalRule)));
+        assert!(parser
+            .parse_line("___")
+            .iter()
+            .any(|e| matches!(e, ParseEvent::HorizontalRule)));
     }
 
     #[test]
@@ -899,7 +964,9 @@ mod tests {
         let e1 = parser.parse_line("<think>");
         assert!(e1.iter().any(|e| matches!(e, ParseEvent::ThinkBlockStart)));
         let e2 = parser.parse_line("Thinking...");
-        assert!(e2.iter().any(|e| matches!(e, ParseEvent::ThinkBlockLine(s) if s == "Thinking...")));
+        assert!(e2
+            .iter()
+            .any(|e| matches!(e, ParseEvent::ThinkBlockLine(s) if s == "Thinking...")));
         let e3 = parser.parse_line("</think>");
         assert!(e3.iter().any(|e| matches!(e, ParseEvent::ThinkBlockEnd)));
     }
@@ -910,7 +977,9 @@ mod tests {
         // First line has 4 spaces indent
         let e1 = parser.parse_line("    # Hello");
         // Should strip the 4 spaces and parse as heading
-        assert!(e1.iter().any(|e| matches!(e, ParseEvent::Heading { level: 1, content } if content == "Hello")));
+        assert!(e1
+            .iter()
+            .any(|e| matches!(e, ParseEvent::Heading { level: 1, content } if content == "Hello")));
     }
 
     #[test]
@@ -918,8 +987,12 @@ mod tests {
         let mut parser = Parser::new();
         let doc = "# Title\n\nSome text.\n\n```\ncode\n```";
         let events = parser.parse_document(doc);
-        assert!(events.iter().any(|e| matches!(e, ParseEvent::Heading { level: 1, .. })));
-        assert!(events.iter().any(|e| matches!(e, ParseEvent::CodeBlockStart { .. })));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ParseEvent::Heading { level: 1, .. })));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ParseEvent::CodeBlockStart { .. })));
         assert!(events.iter().any(|e| matches!(e, ParseEvent::CodeBlockEnd)));
     }
 
@@ -934,8 +1007,16 @@ mod tests {
 
     #[test]
     fn test_is_block_is_inline() {
-        assert!(ParseEvent::Heading { level: 1, content: "x".to_string() }.is_block());
-        assert!(ParseEvent::CodeBlockStart { language: None, indent: 0 }.is_block());
+        assert!(ParseEvent::Heading {
+            level: 1,
+            content: "x".to_string()
+        }
+        .is_block());
+        assert!(ParseEvent::CodeBlockStart {
+            language: None,
+            indent: 0
+        }
+        .is_block());
         assert!(ParseEvent::Text("x".to_string()).is_inline());
         assert!(ParseEvent::Bold("x".to_string()).is_inline());
     }

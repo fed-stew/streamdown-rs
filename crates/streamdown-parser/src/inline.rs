@@ -56,7 +56,11 @@ impl FormatState {
 
     #[allow(dead_code)]
     fn any_active(&self) -> bool {
-        self.bold || self.italic || self.underline || self.strikeout || self.code_backticks.is_some()
+        self.bold
+            || self.italic
+            || self.underline
+            || self.strikeout
+            || self.code_backticks.is_some()
     }
 
     fn reset(&mut self) {
@@ -417,7 +421,7 @@ pub fn format_line(line: &str, process_links: bool, process_images: bool) -> Str
             InlineElement::Link { text, url } => {
                 result.push_str(LINK.0);
                 result.push_str(&url);
-                result.push_str("\x1b");
+                result.push('\x1b');
                 result.push_str(UNDERLINE.0);
                 result.push_str(&text);
                 result.push_str(UNDERLINE.1);
@@ -427,7 +431,7 @@ pub fn format_line(line: &str, process_links: bool, process_images: bool) -> Str
                 result.push_str(DIM_ON);
                 result.push_str("[\u{1F5BC} ");
                 result.push_str(&alt);
-                result.push_str("]");
+                result.push(']');
                 result.push_str(DIM_OFF);
             }
             InlineElement::Footnote(s) => {
@@ -447,7 +451,10 @@ mod tests {
     fn test_parse_plain_text() {
         let mut parser = InlineParser::new();
         let elements = parser.parse("Hello world");
-        assert_eq!(elements, vec![InlineElement::Text("Hello world".to_string())]);
+        assert_eq!(
+            elements,
+            vec![InlineElement::Text("Hello world".to_string())]
+        );
     }
 
     #[test]
