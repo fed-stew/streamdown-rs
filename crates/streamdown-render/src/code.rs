@@ -124,11 +124,12 @@ pub fn render_code_start(
             let lang_width = unicode_width::UnicodeWidthStr::width(lang);
             let padding = width.saturating_sub(lang_width + 2);
             lines.push(format!(
-                "{}{}{}[{}]{}{}",
+                "{}{}{}[{}]{}{}{}",
                 left_margin,
                 bg,
                 label_fg,
                 lang,
+                bg,
                 " ".repeat(padding),
                 RESET
             ));
@@ -184,11 +185,12 @@ pub fn render_code_line(
         let padding = width.saturating_sub(visible_len);
 
         result.push(format!(
-            "{}{}{}{}{}{}",
+            "{}{}{}{}{}{}{}",
             left_margin,
             bg,
             indent_str,
             highlighted,
+            bg,
             " ".repeat(padding),
             RESET
         ));
