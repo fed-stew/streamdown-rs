@@ -415,7 +415,10 @@ mod tests {
         let margin_byte_len = margin.len();
 
         assert_eq!(margin_visible_len, 2, "Visible length should be 2");
-        assert!(margin_byte_len > 10, "Byte length should be much larger due to ANSI codes");
+        assert!(
+            margin_byte_len > 10,
+            "Byte length should be much larger due to ANSI codes"
+        );
 
         // Short content that should fit on one line
         // With correct calculation: content fits in (40 - 2 - 4) = 34 chars
@@ -435,9 +438,11 @@ mod tests {
         // With correct calculation, 30 chars should fit in 34 char width (1 line)
         // With buggy calculation, 30 chars won't fit in 21 char width (multiple lines)
         assert_eq!(
-            lines.len(), 1,
+            lines.len(),
+            1,
             "Content should fit on one line with correct margin calculation, got {} lines: {:?}",
-            lines.len(), lines
+            lines.len(),
+            lines
         );
     }
 }

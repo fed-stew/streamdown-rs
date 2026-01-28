@@ -46,6 +46,7 @@ pub use text::{simple_wrap, split_text, text_wrap, WrappedText};
 
 use std::io::Write;
 
+use serde::{Deserialize, Serialize};
 use streamdown_ansi::codes::{
     BOLD_OFF, BOLD_ON, DIM_ON, ITALIC_OFF, ITALIC_ON, RESET, STRIKEOUT_OFF, STRIKEOUT_ON,
     UNDERLINE_OFF, UNDERLINE_ON,
@@ -75,7 +76,7 @@ use streamdown_syntax::Highlighter;
 /// Render style configuration.
 ///
 /// Contains color values for different elements.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RenderStyle {
     /// Bright/highlight color (for h2)
     pub bright: String,

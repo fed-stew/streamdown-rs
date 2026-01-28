@@ -1068,7 +1068,9 @@ mod tests {
         // First line: 4 ASCII spaces triggers space-indented code block
         let line1 = "    first line of code";
         let events1 = parser.parse_line(line1);
-        assert!(events1.iter().any(|e| matches!(e, ParseEvent::CodeBlockStart { .. })));
+        assert!(events1
+            .iter()
+            .any(|e| matches!(e, ParseEvent::CodeBlockStart { .. })));
 
         // Second line: 2 fullwidth spaces (6 bytes) - byte 4 is NOT a char boundary
         // This would panic with buggy code: "byte index 4 is not a char boundary"
@@ -1090,7 +1092,9 @@ mod tests {
 
         // Top-level list item
         let events1 = parser.parse_line("- top level");
-        assert!(events1.iter().any(|e| matches!(e, ParseEvent::ListItem { indent: 0, .. })));
+        assert!(events1
+            .iter()
+            .any(|e| matches!(e, ParseEvent::ListItem { indent: 0, .. })));
 
         // List item with 1 fullwidth space indent (3 bytes, 1 char)
         // Should be treated as indent 1 (char-based), not indent 3 (byte-based)
@@ -1098,7 +1102,9 @@ mod tests {
         let events2 = parser.parse_line(line2);
 
         // Check that indent is character-based (1), not byte-based (3)
-        let list_item = events2.iter().find(|e| matches!(e, ParseEvent::ListItem { .. }));
+        let list_item = events2
+            .iter()
+            .find(|e| matches!(e, ParseEvent::ListItem { .. }));
         assert!(list_item.is_some(), "Should have parsed list item");
 
         if let Some(ParseEvent::ListItem { indent, .. }) = list_item {
@@ -1124,7 +1130,9 @@ mod tests {
 
         // Enter code block with 4 ASCII spaces
         let events1 = parser.parse_line("    code line");
-        assert!(events1.iter().any(|e| matches!(e, ParseEvent::CodeBlockStart { .. })));
+        assert!(events1
+            .iter()
+            .any(|e| matches!(e, ParseEvent::CodeBlockStart { .. })));
 
         // Line with 2 fullwidth spaces (6 bytes, 2 chars) should EXIT code block
         // because 2 chars < 4 required indent
@@ -1138,7 +1146,9 @@ mod tests {
 
         // Should have exited code block (CodeBlockEnd event)
         assert!(
-            events2.iter().any(|e| matches!(e, ParseEvent::CodeBlockEnd)),
+            events2
+                .iter()
+                .any(|e| matches!(e, ParseEvent::CodeBlockEnd)),
             "Should have exited code block with only 2-char indent"
         );
     }

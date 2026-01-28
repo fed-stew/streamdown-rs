@@ -17,3 +17,4 @@ streamdown-syntax.workspace = true
 crossterm.workspace = true
 unicode-width.workspace = true
 base64.workspace = true
+serde.workspace = true

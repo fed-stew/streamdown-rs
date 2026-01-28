@@ -122,15 +122,7 @@ pub fn render_code_start(
 
             lines.push(format!(
                 "{}{}{}{}{}{}{}{}{}",
-                left_margin,
-                fg,
-                bg,
-                first_char,
-                label_fg,
-                label,
-                fg,
-                remaining_border,
-                RESET
+                left_margin, fg, bg, first_char, label_fg, label, fg, remaining_border, RESET
             ));
         } else {
             // No language label, just border
@@ -439,7 +431,8 @@ mod tests {
     fn test_code_wrap_multibyte_utf8_characters() {
         // '═' is 3 bytes (U+2550). Buggy byte-based slicing at position 36 would
         // land inside a character, causing: "byte index 36 is not a char boundary"
-        let line = "//  ═══════════════════════════════════════════════════════════════════════════";
+        let line =
+            "//  ═══════════════════════════════════════════════════════════════════════════";
 
         let (_, lines) = code_wrap(line, 40, true);
 
@@ -540,7 +533,10 @@ mod tests {
         let lines = render_code_start(Some(lang), width, "", &style, false);
 
         // Find the language label line (contains "[日本語]")
-        let label_line = lines.iter().find(|l| l.contains(lang)).expect("Should have language label");
+        let label_line = lines
+            .iter()
+            .find(|l| l.contains(lang))
+            .expect("Should have language label");
 
         // The label line should have correct width (40 display width)
         // Strip ANSI codes and check width
