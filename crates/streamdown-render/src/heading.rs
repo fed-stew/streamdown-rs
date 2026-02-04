@@ -1,12 +1,12 @@
 //! Heading rendering.
 //!
 //! Renders markdown headings (h1-h6) with different styles:
-//! - h1: Bold, centered
-//! - h2: Bold, colored (bright), centered
-//! - h3: Bold, head color
-//! - h4: Bold, symbol color
-//! - h5: Plain text
-//! - h6: Grey/dimmed
+//! - h1: Bold, h1 color, centered
+//! - h2: Bold, h2 color, centered
+//! - h3: Bold, h3 color
+//! - h4: Bold, h4 color
+//! - h5: h5 color (no bold)
+//! - h6: h6 color (muted)
 
 use crate::RenderStyle;
 use crate::fg_color;
@@ -43,15 +43,16 @@ pub fn render_heading(
 
         let rendered = match level {
             1 => {
-                // h1: Bold, centered
+                // h1: Bold, colored, centered
+                let fg = fg_color(&style.h1);
                 format!(
-                    "{}\n{}{}{}{}{}",
-                    left_margin, left_margin, BOLD_ON, center_pad, line, BOLD_OFF
+                    "{}\n{}{}{}{}{}{}{}",
+                    left_margin, left_margin, BOLD_ON, fg, center_pad, line, BOLD_OFF, RESET
                 )
             }
             2 => {
-                // h2: Bold, bright color, centered
-                let fg = fg_color(&style.bright);
+                // h2: Bold, colored, centered
+                let fg = fg_color(&style.h2);
                 let spaces_right = width
                     .saturating_sub(line_width)
                     .saturating_sub(spaces_to_center);
@@ -69,28 +70,29 @@ pub fn render_heading(
                 )
             }
             3 => {
-                // h3: Bold, head color
-                let fg = fg_color(&style.head);
+                // h3: Bold, colored
+                let fg = fg_color(&style.h3);
                 format!(
                     "{}{}{}{}{}{}",
                     left_margin, BOLD_ON, fg, line, BOLD_OFF, RESET
                 )
             }
             4 => {
-                // h4: Bold, symbol color
-                let fg = fg_color(&style.symbol);
+                // h4: Bold, colored
+                let fg = fg_color(&style.h4);
                 format!(
                     "{}{}{}{}{}{}",
                     left_margin, BOLD_ON, fg, line, BOLD_OFF, RESET
                 )
             }
             5 => {
-                // h5: Plain text
-                format!("{}{}{}", left_margin, line, RESET)
+                // h5: Colored (no bold)
+                let fg = fg_color(&style.h5);
+                format!("{}{}{}{}", left_margin, fg, line, RESET)
             }
             _ => {
-                // h6 and beyond: Grey/dimmed
-                let fg = fg_color(&style.grey);
+                // h6 and beyond: Colored (muted)
+                let fg = fg_color(&style.h6);
                 format!("{}{}{}{}", left_margin, fg, line, RESET)
             }
         };

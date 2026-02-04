@@ -52,7 +52,7 @@ impl<'a> CodeBlockState<'a> {
     /// Start a new code block.
     pub fn start(&mut self, language: Option<String>, style: &RenderStyle) {
         self.language = language.clone();
-        self.background = bg_color(&style.dark);
+        self.background = bg_color(&style.code_bg);
         self.raw_buffer.clear();
 
         // Create highlight state for the language
@@ -99,8 +99,8 @@ pub fn render_code_start(
     pretty_pad: bool,
 ) -> Vec<String> {
     let mut lines = Vec::new();
-    let bg = bg_color(&style.dark);
-    let fg = fg_color(&style.grey);
+    let bg = bg_color(&style.code_bg);
+    let fg = fg_color(&style.table_border);
 
     // Check if we have a language label to embed
     let lang_label = language
@@ -110,7 +110,7 @@ pub fn render_code_start(
     if pretty_pad {
         // Pretty top border: ▄▄▄▄▄ with optional language label embedded
         if let Some(label) = lang_label {
-            let label_fg = fg_color(&style.symbol);
+            let label_fg = fg_color(&style.code_label);
             let label_width = unicode_width::UnicodeWidthStr::width(label.as_str());
 
             // First character (column 0)
@@ -132,7 +132,7 @@ pub fn render_code_start(
     } else {
         // Simple border with spaces (copy-paste friendly)
         if let Some(label) = lang_label {
-            let label_fg = fg_color(&style.symbol);
+            let label_fg = fg_color(&style.code_label);
             let label_width = unicode_width::UnicodeWidthStr::width(label.as_str());
             let padding = width.saturating_sub(1 + label_width);
 
@@ -180,7 +180,7 @@ pub fn render_code_line(
     style: &RenderStyle,
     pretty_broken: bool,
 ) -> Vec<String> {
-    let bg = bg_color(&style.dark);
+    let bg = bg_color(&style.code_bg);
 
     // Wrap long lines if pretty_broken is enabled
     let (indent, wrapped_lines) = code_wrap(line, width, pretty_broken);
@@ -245,8 +245,8 @@ pub fn render_code_end(
     pretty_pad: bool,
 ) -> Vec<String> {
     let mut lines = Vec::new();
-    let bg = bg_color(&style.dark);
-    let fg = fg_color(&style.grey);
+    let bg = bg_color(&style.code_bg);
+    let fg = fg_color(&style.table_border);
 
     if pretty_pad {
         // Pretty bottom border: ▀▀▀▀▀

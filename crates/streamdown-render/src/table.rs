@@ -113,9 +113,9 @@ pub fn render_table_row(
 
     // Choose background color based on header state
     let bg = if state.is_header {
-        bg_color(&style.mid)
+        bg_color(&style.table_header_bg)
     } else {
-        bg_color(&style.dark)
+        bg_color(&style.code_bg)
     };
 
     // Wrap each cell's content to fit column width
@@ -140,7 +140,7 @@ pub fn render_table_row(
 
     // Render each line of the row
     let mut result = Vec::with_capacity(max_height);
-    let separator_fg = fg_color(&style.symbol);
+    let separator_fg = fg_color(&style.table_border);
 
     for row_idx in 0..max_height {
         let mut line_parts = Vec::with_capacity(num_cols);
@@ -175,7 +175,7 @@ pub fn render_table_separator(
     left_margin: &str,
     style: &RenderStyle,
 ) -> String {
-    let fg = fg_color(&style.grey);
+    let fg = fg_color(&style.table_border);
 
     // Use full width for separator
     let separator_width = if state.column_widths.is_empty() {

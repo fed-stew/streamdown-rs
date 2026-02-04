@@ -140,7 +140,7 @@ fn render_inline_content(content: &str, style: &RenderStyle) -> String {
             }
             InlineElement::Code(text) => {
                 // Inline code with background
-                let bg = bg_color(&style.dark);
+                let bg = bg_color(&style.code_bg);
                 result.push_str(&bg);
                 result.push_str(DIM_ON);
                 result.push(' ');
@@ -150,18 +150,18 @@ fn render_inline_content(content: &str, style: &RenderStyle) -> String {
             }
             InlineElement::Link { text, url } => {
                 // Underlined text with URL in parens
-                let fg = fg_color(&style.grey);
+                let fg = fg_color(&style.link_url);
                 result.push_str(UNDERLINE_ON);
                 result.push_str(&decode_html_entities(&text));
                 result.push_str(UNDERLINE_OFF);
                 result.push_str(&format!(" {}({}){}", fg, url, RESET));
             }
             InlineElement::Image { alt, .. } => {
-                let fg = fg_color(&style.symbol);
+                let fg = fg_color(&style.image_marker);
                 result.push_str(&format!("{}[🖼 {}]{}", fg, alt, RESET));
             }
             InlineElement::Footnote(text) => {
-                let fg = fg_color(&style.symbol);
+                let fg = fg_color(&style.footnote);
                 result.push_str(&format!("{}{}{}", fg, text, RESET));
             }
         }
@@ -217,7 +217,7 @@ pub fn render_list_item(
     let content_indent = indent_spaces + marker_width + 1; // +1 for space after marker
 
     // Color the marker
-    let marker_fg = fg_color(&style.symbol);
+    let marker_fg = fg_color(&style.bullet);
     let colored_marker = format!("{}{}{}", marker_fg, marker, RESET);
 
     // Parse and render inline content with formatting (bold, italic, strikethrough, etc.)
