@@ -43,11 +43,11 @@ pub fn unsupported_error() -> io::Error {
 mod unix {
     use super::*;
     use nix::libc;
-    use nix::poll::{poll, PollFd, PollFlags, PollTimeout};
-    use nix::pty::{openpty, OpenptyResult};
+    use nix::poll::{PollFd, PollFlags, PollTimeout, poll};
+    use nix::pty::{OpenptyResult, openpty};
     use nix::sys::termios::{self, LocalFlags, SetArg, Termios};
-    use nix::sys::wait::{waitpid, WaitPidFlag, WaitStatus};
-    use nix::unistd::{dup2, fork, read, write, ForkResult, Pid};
+    use nix::sys::wait::{WaitPidFlag, WaitStatus, waitpid};
+    use nix::unistd::{ForkResult, Pid, dup2, fork, read, write};
     use std::ffi::CString;
     use std::io::Write;
     use std::os::fd::{AsFd, AsRawFd, BorrowedFd, OwnedFd, RawFd};
@@ -81,8 +81,7 @@ mod unix {
             let original_termios = termios::tcgetattr(stdin_fd).ok();
 
             // Open PTY pair
-            let OpenptyResult { master, slave } =
-                openpty(None, None).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            let OpenptyResult { master, slave } = openpty(None, None).map_err(io::Error::other)?;
 
             // Fork
             match unsafe { fork() } {
@@ -158,7 +157,7 @@ mod unix {
                         child_alive: true,
                     })
                 }
-                Err(e) => Err(io::Error::new(io::ErrorKind::Other, e)),
+                Err(e) => Err(io::Error::other(e)),
             }
         }
 
@@ -206,7 +205,7 @@ mod unix {
             match read(self.master.as_raw_fd(), buf) {
                 Ok(n) => Ok(n),
                 Err(nix::errno::Errno::EAGAIN) => Ok(0),
-                Err(e) => Err(io::Error::new(io::ErrorKind::Other, e)),
+                Err(e) => Err(io::Error::other(e)),
             }
         }
 
@@ -223,7 +222,7 @@ mod unix {
         /// Write bytes to the master (keyboard input to subprocess).
         pub fn write_master(&mut self, data: &[u8]) -> io::Result<usize> {
             self.keyboard_count += data.len();
-            write(&self.master, data).map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+            write(&self.master, data).map_err(io::Error::other)
         }
 
         /// Write a single byte to master.
@@ -239,7 +238,7 @@ mod unix {
                 Ok(0) => Ok(None),
                 Ok(_) => Ok(Some(buf[0])),
                 Err(nix::errno::Errno::EAGAIN) => Ok(None),
-                Err(e) => Err(io::Error::new(io::ErrorKind::Other, e)),
+                Err(e) => Err(io::Error::other(e)),
             }
         }
 
@@ -284,7 +283,7 @@ mod unix {
                     Ok(128 + signal as i32)
                 }
                 Ok(_) => Ok(0),
-                Err(e) => Err(io::Error::new(io::ErrorKind::Other, e)),
+                Err(e) => Err(io::Error::other(e)),
             }
         }
 

@@ -166,12 +166,12 @@ impl Config {
     /// let config = Config::load().unwrap();
     /// ```
     pub fn load() -> Result<Self> {
-        if let Some(config_path) = Self::config_path() {
-            if config_path.exists() {
-                let content = std::fs::read_to_string(&config_path)?;
-                return toml::from_str(&content)
-                    .map_err(|e| StreamdownError::Config(format!("Parse error: {}", e)));
-            }
+        if let Some(config_path) = Self::config_path()
+            && config_path.exists()
+        {
+            let content = std::fs::read_to_string(&config_path)?;
+            return toml::from_str(&content)
+                .map_err(|e| StreamdownError::Config(format!("Parse error: {}", e)));
         }
 
         // Return defaults if no config found

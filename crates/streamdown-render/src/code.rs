@@ -6,7 +6,7 @@
 //! - Line wrapping for long lines (optional)
 //! - Language labels
 
-use crate::{bg_color, fg_color, RenderStyle};
+use crate::{RenderStyle, bg_color, fg_color};
 use streamdown_ansi::codes::RESET;
 use streamdown_syntax::{HighlightState, Highlighter};
 
@@ -52,7 +52,7 @@ impl<'a> CodeBlockState<'a> {
     /// Start a new code block.
     pub fn start(&mut self, language: Option<String>, style: &RenderStyle) {
         self.language = language.clone();
-        self.background = bg_color(&style.dark);
+        self.background = bg_color(&style.code_bg);
         self.raw_buffer.clear();
 
         // Create highlight state for the language
@@ -99,37 +99,59 @@ pub fn render_code_start(
     pretty_pad: bool,
 ) -> Vec<String> {
     let mut lines = Vec::new();
-    let bg = bg_color(&style.dark);
-    let fg = fg_color(&style.grey);
+    let bg = bg_color(&style.code_bg);
+    let fg = fg_color(&style.table_border);
+
+    // Check if we have a language label to embed
+    let lang_label = language
+        .filter(|l| !l.is_empty() && *l != "text")
+        .map(|lang| format!("[{}]", lang));
 
     if pretty_pad {
-        // Pretty top border: ▄▄▄▄▄ (foreground color on dark background)
-        let border = CODEPAD_TOP.to_string().repeat(width);
-        lines.push(format!("{}{}{}{}{}", left_margin, fg, bg, border, RESET));
+        // Pretty top border: ▄▄▄▄▄ with optional language label embedded
+        if let Some(label) = lang_label {
+            let label_fg = fg_color(&style.code_label);
+            let label_width = unicode_width::UnicodeWidthStr::width(label.as_str());
+
+            // First character (column 0)
+            let first_char = CODEPAD_TOP.to_string();
+            // Label starts at column 1 (second position)
+            // Remaining border characters fill the rest
+            let remaining_width = width.saturating_sub(1 + label_width);
+            let remaining_border = CODEPAD_TOP.to_string().repeat(remaining_width);
+
+            lines.push(format!(
+                "{}{}{}{}{}{}{}{}{}",
+                left_margin, fg, bg, first_char, label_fg, label, fg, remaining_border, RESET
+            ));
+        } else {
+            // No language label, just border
+            let border = CODEPAD_TOP.to_string().repeat(width);
+            lines.push(format!("{}{}{}{}{}", left_margin, fg, bg, border, RESET));
+        }
     } else {
         // Simple border with spaces (copy-paste friendly)
-        lines.push(format!(
-            "{}{}{}{}",
-            left_margin,
-            bg,
-            " ".repeat(width),
-            RESET
-        ));
-    }
+        if let Some(label) = lang_label {
+            let label_fg = fg_color(&style.code_label);
+            let label_width = unicode_width::UnicodeWidthStr::width(label.as_str());
+            let padding = width.saturating_sub(1 + label_width);
 
-    // Language label if provided
-    if let Some(lang) = language {
-        if !lang.is_empty() && lang != "text" {
-            let label_fg = fg_color(&style.symbol);
-            let lang_width = unicode_width::UnicodeWidthStr::width(lang);
-            let padding = width.saturating_sub(lang_width + 2);
             lines.push(format!(
-                "{}{}{}[{}]{}{}",
+                "{}{} {}{}{}{}{}",
                 left_margin,
                 bg,
                 label_fg,
-                lang,
+                label,
+                bg,
                 " ".repeat(padding),
+                RESET
+            ));
+        } else {
+            lines.push(format!(
+                "{}{}{}{}",
+                left_margin,
+                bg,
+                " ".repeat(width),
                 RESET
             ));
         }
@@ -158,7 +180,7 @@ pub fn render_code_line(
     style: &RenderStyle,
     pretty_broken: bool,
 ) -> Vec<String> {
-    let bg = bg_color(&style.dark);
+    let bg = bg_color(&style.code_bg);
 
     // Wrap long lines if pretty_broken is enabled
     let (indent, wrapped_lines) = code_wrap(line, width, pretty_broken);
@@ -184,11 +206,12 @@ pub fn render_code_line(
         let padding = width.saturating_sub(visible_len);
 
         result.push(format!(
-            "{}{}{}{}{}{}",
+            "{}{}{}{}{}{}{}",
             left_margin,
             bg,
             indent_str,
             highlighted,
+            bg,
             " ".repeat(padding),
             RESET
         ));
@@ -222,8 +245,8 @@ pub fn render_code_end(
     pretty_pad: bool,
 ) -> Vec<String> {
     let mut lines = Vec::new();
-    let bg = bg_color(&style.dark);
-    let fg = fg_color(&style.grey);
+    let bg = bg_color(&style.code_bg);
+    let fg = fg_color(&style.table_border);
 
     if pretty_pad {
         // Pretty bottom border: ▀▀▀▀▀
@@ -408,11 +431,12 @@ mod tests {
     fn test_code_wrap_multibyte_utf8_characters() {
         // '═' is 3 bytes (U+2550). Buggy byte-based slicing at position 36 would
         // land inside a character, causing: "byte index 36 is not a char boundary"
-        let line = "//  ═══════════════════════════════════════════════════════════════════════════";
+        let line =
+            "//  ═══════════════════════════════════════════════════════════════════════════";
 
         let (_, lines) = code_wrap(line, 40, true);
 
-        assert!(lines.len() >= 1);
+        assert!(!lines.is_empty());
         for line in &lines {
             assert!(line.chars().count() > 0 || line.is_empty());
         }
@@ -509,7 +533,10 @@ mod tests {
         let lines = render_code_start(Some(lang), width, "", &style, false);
 
         // Find the language label line (contains "[日本語]")
-        let label_line = lines.iter().find(|l| l.contains(lang)).expect("Should have language label");
+        let label_line = lines
+            .iter()
+            .find(|l| l.contains(lang))
+            .expect("Should have language label");
 
         // The label line should have correct width (40 display width)
         // Strip ANSI codes and check width

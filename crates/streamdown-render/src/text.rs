@@ -424,7 +424,7 @@ mod tests {
 
         let lines = simple_wrap(text, 10);
 
-        assert!(lines.len() >= 1);
+        assert!(!lines.is_empty());
     }
 
     #[test]

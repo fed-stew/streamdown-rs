@@ -79,11 +79,11 @@ pub fn decode_html_entities(text: &str) -> String {
                 num_str.parse::<u32>().ok()
             };
 
-            if let Some(cp) = codepoint {
-                if let Some(c) = char::from_u32(cp) {
-                    result = result.replace(entity, &c.to_string());
-                    continue;
-                }
+            if let Some(cp) = codepoint
+                && let Some(c) = char::from_u32(cp)
+            {
+                result = result.replace(entity, &c.to_string());
+                continue;
             }
         }
         // If we couldn't parse it, break to avoid infinite loop

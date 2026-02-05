@@ -217,10 +217,10 @@ impl Tokenizer {
         // Find all footnotes
         for cap in FOOTNOTE_RE.captures_iter(line) {
             let m = cap.get(0).unwrap();
-            if let Some(num_match) = cap.get(1) {
-                if let Ok(num) = num_match.as_str().parse::<u32>() {
-                    extractions.push((m.start(), m.end(), Token::Footnote(num)));
-                }
+            if let Some(num_match) = cap.get(1)
+                && let Ok(num) = num_match.as_str().parse::<u32>()
+            {
+                extractions.push((m.start(), m.end(), Token::Footnote(num)));
             }
         }
 

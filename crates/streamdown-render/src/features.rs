@@ -30,7 +30,7 @@ use std::path::PathBuf;
 const MAX_CLIPBOARD_SIZE: usize = 50_000;
 
 pub fn copy_to_clipboard<W: Write>(code: &str, writer: &mut W) -> io::Result<()> {
-    use base64::{engine::general_purpose::STANDARD, Engine};
+    use base64::{Engine, engine::general_purpose::STANDARD};
 
     // Check size limit to avoid terminal issues
     if code.len() > MAX_CLIPBOARD_SIZE {

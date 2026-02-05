@@ -570,9 +570,11 @@ mod tests {
         let mut parser = InlineParser::new();
         let elements = parser.parse("Some text[^1] here");
 
-        assert!(elements
-            .iter()
-            .any(|e| matches!(e, InlineElement::Footnote(s) if s == "¹")));
+        assert!(
+            elements
+                .iter()
+                .any(|e| matches!(e, InlineElement::Footnote(s) if s == "¹"))
+        );
     }
 
     #[test]
@@ -580,9 +582,11 @@ mod tests {
         let mut parser = InlineParser::new();
         let elements = parser.parse("Reference[^42]");
 
-        assert!(elements
-            .iter()
-            .any(|e| matches!(e, InlineElement::Footnote(s) if s == "⁴²")));
+        assert!(
+            elements
+                .iter()
+                .any(|e| matches!(e, InlineElement::Footnote(s) if s == "⁴²"))
+        );
     }
 
     #[test]

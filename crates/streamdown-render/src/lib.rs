@@ -28,32 +28,38 @@
 //! ```
 
 pub mod code;
+pub mod colors;
 pub mod features;
 pub mod heading;
 pub mod list;
 pub mod table;
 pub mod text;
 
-pub use code::{code_wrap, CodeBlockState, CODEPAD_BOTTOM, CODEPAD_TOP};
+pub use code::{CODEPAD_BOTTOM, CODEPAD_TOP, CodeBlockState, code_wrap};
+pub use colors::{COLODORE, resolve_color};
 pub use features::{
-    copy_to_clipboard, is_tty, savebrace, savebrace_clear, savebrace_last, savebrace_path,
-    savebrace_read, terminal_size, terminal_width, RenderFeatures,
+    RenderFeatures, copy_to_clipboard, is_tty, savebrace, savebrace_clear, savebrace_last,
+    savebrace_path, savebrace_read, terminal_size, terminal_width,
 };
 pub use heading::render_heading;
-pub use list::{render_list_item, ListState, BULLETS};
-pub use table::{render_table_row, render_table_separator, TableState};
-pub use text::{simple_wrap, split_text, text_wrap, WrappedText};
+pub use list::{BULLETS, ListState, render_list_item};
+pub use table::{TableState, render_table_row, render_table_separator};
+pub use text::{WrappedText, simple_wrap, split_text, text_wrap};
 
 use std::io::Write;
 
+use serde::{Deserialize, Serialize};
 use streamdown_ansi::codes::{
     BOLD_OFF, BOLD_ON, DIM_ON, ITALIC_OFF, ITALIC_ON, RESET, STRIKEOUT_OFF, STRIKEOUT_ON,
     UNDERLINE_OFF, UNDERLINE_ON,
 };
 use streamdown_ansi::color::hex2rgb;
 
-/// Generate foreground color escape code from hex string.
-pub fn fg_color(hex: &str) -> String {
+/// Generate foreground color escape code from color string.
+///
+/// Accepts either a Colodore preset name (e.g., "yellow") or a hex value (e.g., "#edf171").
+pub fn fg_color(color: &str) -> String {
+    let hex = colors::resolve_color(color);
     if let Some((r, g, b)) = hex2rgb(hex) {
         format!("\x1b[38;2;{};{};{}m", r, g, b)
     } else {
@@ -61,8 +67,11 @@ pub fn fg_color(hex: &str) -> String {
     }
 }
 
-/// Generate background color escape code from hex string.
-pub fn bg_color(hex: &str) -> String {
+/// Generate background color escape code from color string.
+///
+/// Accepts either a Colodore preset name (e.g., "yellow") or a hex value (e.g., "#edf171").
+pub fn bg_color(color: &str) -> String {
+    let hex = colors::resolve_color(color);
     if let Some((r, g, b)) = hex2rgb(hex) {
         format!("\x1b[48;2;{};{};{}m", r, g, b)
     } else {
@@ -74,50 +83,79 @@ use streamdown_syntax::Highlighter;
 
 /// Render style configuration.
 ///
-/// Contains color values for different elements.
-#[derive(Debug, Clone)]
+/// Contains color values for each styled element.
+/// Colors can be specified as hex values (e.g., "#edf171") or as
+/// Colodore preset names (e.g., "yellow", "cyan").
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RenderStyle {
-    /// Bright/highlight color (for h2)
-    pub bright: String,
-    /// Heading color (for h3)
-    pub head: String,
-    /// Symbol color (for markers, borders)
-    pub symbol: String,
-    /// Grey/muted color (for h6, dim text)
-    pub grey: String,
-    /// Dark background color (for code blocks)
-    pub dark: String,
-    /// Mid background color (for table headers)
-    pub mid: String,
-    /// Light background color
-    pub light: String,
+    // Heading colors
+    /// Color for h1 headings
+    pub h1: String,
+    /// Color for h2 headings
+    pub h2: String,
+    /// Color for h3 headings
+    pub h3: String,
+    /// Color for h4 headings
+    pub h4: String,
+    /// Color for h5 headings
+    pub h5: String,
+    /// Color for h6 headings
+    pub h6: String,
+
+    // Code blocks
+    /// Background color for code blocks
+    pub code_bg: String,
+    /// Color for code block language labels
+    pub code_label: String,
+
+    // Lists
+    /// Color for list bullet markers
+    pub bullet: String,
+
+    // Tables
+    /// Background color for table headers
+    pub table_header_bg: String,
+    /// Color for table borders
+    pub table_border: String,
+
+    // Borders and decorations
+    /// Color for blockquote borders
+    pub blockquote_border: String,
+    /// Color for think block borders
+    pub think_border: String,
+    /// Color for horizontal rules
+    pub hr: String,
+
+    // Links and references
+    /// Color for link URLs
+    pub link_url: String,
+    /// Color for image markers
+    pub image_marker: String,
+    /// Color for footnote markers
+    pub footnote: String,
 }
 
 impl Default for RenderStyle {
     fn default() -> Self {
+        // Colodore palette defaults
         Self {
-            bright: "#87ceeb".to_string(), // Sky blue
-            head: "#98fb98".to_string(),   // Pale green
-            symbol: "#dda0dd".to_string(), // Plum
-            grey: "#808080".to_string(),   // Grey
-            dark: "#1a1a2e".to_string(),   // Dark blue-grey
-            mid: "#2d2d44".to_string(),    // Mid blue-grey
-            light: "#3d3d5c".to_string(),  // Light blue-grey
-        }
-    }
-}
-
-impl RenderStyle {
-    /// Create from a computed style (from config).
-    pub fn from_computed(computed: &streamdown_config::ComputedStyle) -> Self {
-        Self {
-            bright: computed.bright.clone(),
-            head: computed.head.clone(),
-            symbol: computed.symbol.clone(),
-            grey: computed.grey.clone(),
-            dark: computed.dark.clone(),
-            mid: computed.mid.clone(),
-            light: "#4d4d6e".to_string(), // Derive from mid
+            h1: "white".to_string(),
+            h2: "yellow".to_string(),
+            h3: "light_green".to_string(),
+            h4: "cyan".to_string(),
+            h5: "light_grey".to_string(),
+            h6: "grey".to_string(),
+            code_bg: "black".to_string(),
+            code_label: "cyan".to_string(),
+            bullet: "cyan".to_string(),
+            table_header_bg: "blue".to_string(),
+            table_border: "grey".to_string(),
+            blockquote_border: "grey".to_string(),
+            think_border: "grey".to_string(),
+            hr: "dark_grey".to_string(),
+            link_url: "grey".to_string(),
+            image_marker: "cyan".to_string(),
+            footnote: "cyan".to_string(),
         }
     }
 }
@@ -231,7 +269,7 @@ impl<W: Write> Renderer<W> {
     /// Calculate the left margin based on current state.
     fn left_margin(&self) -> String {
         if self.in_blockquote {
-            let border = format!("{}│{} ", fg_color(&self.style.grey), RESET);
+            let border = format!("{}│{} ", fg_color(&self.style.blockquote_border), RESET);
             border.repeat(self.blockquote_depth)
         } else {
             String::new()
@@ -272,7 +310,7 @@ impl<W: Write> Renderer<W> {
             }
 
             ParseEvent::InlineCode(code) => {
-                let bg = bg_color(&self.style.dark);
+                let bg = bg_color(&self.style.code_bg);
                 self.write(&format!("{}{} {} {}", bg, DIM_ON, code, RESET))?;
             }
 
@@ -302,7 +340,7 @@ impl<W: Write> Renderer<W> {
             ParseEvent::Link { text, url } => {
                 // Render as: underlined text (url)
                 // Also include OSC 8 hyperlink for terminals that support it
-                let fg = fg_color(&self.style.grey);
+                let fg = fg_color(&self.style.link_url);
 
                 // OSC 8 start
                 self.write("\x1b]8;;")?;
@@ -320,12 +358,12 @@ impl<W: Write> Renderer<W> {
             }
 
             ParseEvent::Image { alt, url: _ } => {
-                let fg = fg_color(&self.style.symbol);
+                let fg = fg_color(&self.style.image_marker);
                 self.write(&format!("{}[\u{1F5BC} {}]{}", fg, alt, RESET))?;
             }
 
             ParseEvent::Footnote(superscript) => {
-                let fg = fg_color(&self.style.symbol);
+                let fg = fg_color(&self.style.footnote);
                 self.write(&format!("{}{}{}", fg, superscript, RESET))?;
             }
 
@@ -370,17 +408,19 @@ impl<W: Write> Renderer<W> {
                 let highlighted = self.highlighter.highlight(line, Some(lang));
 
                 // Render with background
-                let bg = bg_color(&self.style.dark);
+                let bg = bg_color(&self.style.code_bg);
                 let margin = self.left_margin();
+                let trimmed = highlighted.trim_end();
                 let padding_needed = self
                     .current_width()
-                    .saturating_sub(streamdown_ansi::utils::visible_length(&highlighted));
+                    .saturating_sub(streamdown_ansi::utils::visible_length(trimmed));
 
                 self.writeln(&format!(
-                    "{}{}{}{}{}",
+                    "{}{}{}{}{}{}",
                     margin,
                     bg,
-                    highlighted.trim_end(),
+                    trimmed,
+                    bg,
                     " ".repeat(padding_needed),
                     RESET
                 ))?;
@@ -502,26 +542,26 @@ impl<W: Write> Renderer<W> {
             }
 
             ParseEvent::ThinkBlockStart => {
-                let fg = fg_color(&self.style.grey);
+                let fg = fg_color(&self.style.think_border);
                 self.writeln(&format!("{}┌─ thinking ─{}", fg, RESET))?;
                 self.in_blockquote = true;
                 self.blockquote_depth = 1;
             }
 
             ParseEvent::ThinkBlockLine(text) => {
-                let fg = fg_color(&self.style.grey);
+                let fg = fg_color(&self.style.think_border);
                 self.writeln(&format!("{}│{} {}", fg, RESET, text))?;
             }
 
             ParseEvent::ThinkBlockEnd => {
-                let fg = fg_color(&self.style.grey);
+                let fg = fg_color(&self.style.think_border);
                 self.writeln(&format!("{}└{}", fg, RESET))?;
                 self.in_blockquote = false;
                 self.blockquote_depth = 0;
             }
 
             ParseEvent::HorizontalRule => {
-                let fg = fg_color(&self.style.grey);
+                let fg = fg_color(&self.style.hr);
                 let rule = "─".repeat(self.current_width());
                 self.writeln(&format!("{}{}{}{}", self.left_margin(), fg, rule, RESET))?;
             }
@@ -565,11 +605,11 @@ impl<W: Write> Renderer<W> {
                 self.write(&format!("{}{}{}", STRIKEOUT_ON, s, STRIKEOUT_OFF))?
             }
             InlineElement::Code(s) => {
-                let bg = bg_color(&self.style.dark);
+                let bg = bg_color(&self.style.code_bg);
                 self.write(&format!("{} {} {}", bg, s, RESET))?
             }
             InlineElement::Link { text, url } => {
-                let fg = fg_color(&self.style.grey);
+                let fg = fg_color(&self.style.link_url);
                 // OSC 8 start
                 self.write("\x1b]8;;")?;
                 self.write(url)?;
@@ -582,11 +622,11 @@ impl<W: Write> Renderer<W> {
                 self.write(&format!(" {}({}){}", fg, url, RESET))?;
             }
             InlineElement::Image { alt, .. } => {
-                let fg = fg_color(&self.style.symbol);
+                let fg = fg_color(&self.style.image_marker);
                 self.write(&format!("{}[\u{1F5BC} {}]{}", fg, alt, RESET))?
             }
             InlineElement::Footnote(s) => {
-                let fg = fg_color(&self.style.symbol);
+                let fg = fg_color(&self.style.footnote);
                 self.write(&format!("{}{}{}", fg, s, RESET))?
             }
         }
@@ -807,14 +847,14 @@ mod tests {
     #[test]
     fn test_render_style() {
         let style = RenderStyle::default();
-        assert!(!style.bright.is_empty());
-        assert!(!style.dark.is_empty());
+        assert!(!style.h2.is_empty());
+        assert!(!style.code_bg.is_empty());
     }
 
     #[test]
     fn test_render_with_custom_style() {
         let style = RenderStyle {
-            bright: "#ff0000".to_string(),
+            h2: "#ff0000".to_string(),
             ..Default::default()
         };
 

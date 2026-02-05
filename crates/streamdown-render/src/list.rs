@@ -7,14 +7,14 @@
 //! - Proper text wrapping for long items
 //! - Inline formatting (bold, italic, strikethrough, etc.)
 
-use crate::text::text_wrap;
 use crate::RenderStyle;
+use crate::text::text_wrap;
 use crate::{bg_color, fg_color};
 use streamdown_ansi::codes::{
     BOLD_OFF, BOLD_ON, DIM_ON, ITALIC_OFF, ITALIC_ON, RESET, STRIKEOUT_OFF, STRIKEOUT_ON,
     UNDERLINE_OFF, UNDERLINE_ON,
 };
-use streamdown_parser::{decode_html_entities, InlineElement, InlineParser, ListBullet};
+use streamdown_parser::{InlineElement, InlineParser, ListBullet, decode_html_entities};
 
 /// Bullet characters for different nesting levels.
 pub const BULLETS: [&str; 4] = [
@@ -140,7 +140,7 @@ fn render_inline_content(content: &str, style: &RenderStyle) -> String {
             }
             InlineElement::Code(text) => {
                 // Inline code with background
-                let bg = bg_color(&style.dark);
+                let bg = bg_color(&style.code_bg);
                 result.push_str(&bg);
                 result.push_str(DIM_ON);
                 result.push(' ');
@@ -150,18 +150,18 @@ fn render_inline_content(content: &str, style: &RenderStyle) -> String {
             }
             InlineElement::Link { text, url } => {
                 // Underlined text with URL in parens
-                let fg = fg_color(&style.grey);
+                let fg = fg_color(&style.link_url);
                 result.push_str(UNDERLINE_ON);
                 result.push_str(&decode_html_entities(&text));
                 result.push_str(UNDERLINE_OFF);
                 result.push_str(&format!(" {}({}){}", fg, url, RESET));
             }
             InlineElement::Image { alt, .. } => {
-                let fg = fg_color(&style.symbol);
+                let fg = fg_color(&style.image_marker);
                 result.push_str(&format!("{}[🖼 {}]{}", fg, alt, RESET));
             }
             InlineElement::Footnote(text) => {
-                let fg = fg_color(&style.symbol);
+                let fg = fg_color(&style.footnote);
                 result.push_str(&format!("{}{}{}", fg, text, RESET));
             }
         }
@@ -217,7 +217,7 @@ pub fn render_list_item(
     let content_indent = indent_spaces + marker_width + 1; // +1 for space after marker
 
     // Color the marker
-    let marker_fg = fg_color(&style.symbol);
+    let marker_fg = fg_color(&style.bullet);
     let colored_marker = format!("{}{}{}", marker_fg, marker, RESET);
 
     // Parse and render inline content with formatting (bold, italic, strikethrough, etc.)
@@ -415,7 +415,10 @@ mod tests {
         let margin_byte_len = margin.len();
 
         assert_eq!(margin_visible_len, 2, "Visible length should be 2");
-        assert!(margin_byte_len > 10, "Byte length should be much larger due to ANSI codes");
+        assert!(
+            margin_byte_len > 10,
+            "Byte length should be much larger due to ANSI codes"
+        );
 
         // Short content that should fit on one line
         // With correct calculation: content fits in (40 - 2 - 4) = 34 chars
@@ -435,9 +438,11 @@ mod tests {
         // With correct calculation, 30 chars should fit in 34 char width (1 line)
         // With buggy calculation, 30 chars won't fit in 21 char width (multiple lines)
         assert_eq!(
-            lines.len(), 1,
+            lines.len(),
+            1,
             "Content should fit on one line with correct margin calculation, got {} lines: {:?}",
-            lines.len(), lines
+            lines.len(),
+            lines
         );
     }
 }

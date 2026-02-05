@@ -31,7 +31,7 @@
 
 mod languages;
 
-pub use languages::{aliases_for, all_aliases, language_alias, LANGUAGE_ALIASES};
+pub use languages::{LANGUAGE_ALIASES, aliases_for, all_aliases, language_alias};
 
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Color, FontStyle, Style, Theme, ThemeSet};
@@ -513,7 +513,7 @@ mod tests {
 
         // Should have foreground colors but no background in escape codes
         assert!(result.contains("38;2;")); // Foreground
-                                           // Background codes (48;2;) should NOT be present when override is set
-                                           // The styling uses our custom method which skips backgrounds
+        // Background codes (48;2;) should NOT be present when override is set
+        // The styling uses our custom method which skips backgrounds
     }
 }

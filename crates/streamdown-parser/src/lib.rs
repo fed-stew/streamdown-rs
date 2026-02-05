@@ -31,8 +31,8 @@ pub mod inline;
 pub mod tokenizer;
 
 pub use entities::decode_html_entities;
-pub use inline::{format_line, InlineElement, InlineParser};
-pub use tokenizer::{cjk_count, is_cjk, not_text, Token, Tokenizer};
+pub use inline::{InlineElement, InlineParser, format_line};
+pub use tokenizer::{Token, Tokenizer, cjk_count, is_cjk, not_text};
 
 use regex::Regex;
 use std::sync::LazyLock;
@@ -353,13 +353,13 @@ impl Parser {
         }
 
         // Only strip if first_indent is > 0
-        if let Some(first_indent) = self.state.first_indent {
-            if first_indent > 0 {
-                let current_indent = line.chars().take_while(|c| c.is_whitespace()).count();
-                if current_indent >= first_indent {
-                    // Skip first_indent characters (not bytes) to avoid UTF-8 boundary issues
-                    return line.chars().skip(first_indent).collect();
-                }
+        if let Some(first_indent) = self.state.first_indent
+            && first_indent > 0
+        {
+            let current_indent = line.chars().take_while(|c| c.is_whitespace()).count();
+            if current_indent >= first_indent {
+                // Skip first_indent characters (not bytes) to avoid UTF-8 boundary issues
+                return line.chars().skip(first_indent).collect();
             }
         }
 
@@ -418,20 +418,20 @@ impl Parser {
 
     fn parse_in_code_block(&mut self, line: &str) {
         // Check for closing fence
-        if let Some(ref fence) = self.code_fence.clone() {
-            if let Some(caps) = CODE_FENCE_END_RE.captures(line) {
-                let end_fence = caps.get(1).map(|m| m.as_str()).unwrap_or("");
-                // Match fence type: ``` with ```, </pre> with <pre>
-                let matches = (fence.starts_with('`') && end_fence.starts_with('`'))
-                    || (fence.starts_with('~') && end_fence.starts_with('~'))
-                    || (fence == "<pre>" && end_fence == "</pre>");
+        if let Some(ref fence) = self.code_fence.clone()
+            && let Some(caps) = CODE_FENCE_END_RE.captures(line)
+        {
+            let end_fence = caps.get(1).map(|m| m.as_str()).unwrap_or("");
+            // Match fence type: ``` with ```, </pre> with <pre>
+            let matches = (fence.starts_with('`') && end_fence.starts_with('`'))
+                || (fence.starts_with('~') && end_fence.starts_with('~'))
+                || (fence == "<pre>" && end_fence == "</pre>");
 
-                if matches {
-                    self.events.push(ParseEvent::CodeBlockEnd);
-                    self.state.exit_code_block();
-                    self.code_fence = None;
-                    return;
-                }
+            if matches {
+                self.events.push(ParseEvent::CodeBlockEnd);
+                self.state.exit_code_block();
+                self.code_fence = None;
+                return;
             }
         }
 
@@ -823,9 +823,10 @@ mod tests {
             |e| matches!(e, ParseEvent::CodeBlockStart { language: Some(l), .. } if l == "rust")
         ));
         let e2 = parser.parse_line("let x = 1;");
-        assert!(e2
-            .iter()
-            .any(|e| matches!(e, ParseEvent::CodeBlockLine(s) if s == "let x = 1;")));
+        assert!(
+            e2.iter()
+                .any(|e| matches!(e, ParseEvent::CodeBlockLine(s) if s == "let x = 1;"))
+        );
         let e3 = parser.parse_line("```");
         assert!(e3.iter().any(|e| matches!(e, ParseEvent::CodeBlockEnd)));
     }
@@ -834,9 +835,10 @@ mod tests {
     fn test_parse_pre_tag() {
         let mut parser = Parser::new();
         let e1 = parser.parse_line("<pre>");
-        assert!(e1
-            .iter()
-            .any(|e| matches!(e, ParseEvent::CodeBlockStart { .. })));
+        assert!(
+            e1.iter()
+                .any(|e| matches!(e, ParseEvent::CodeBlockStart { .. }))
+        );
         let e2 = parser.parse_line("code");
         assert!(e2.iter().any(|e| matches!(e, ParseEvent::CodeBlockLine(_))));
         let e3 = parser.parse_line("</pre>");
@@ -849,12 +851,16 @@ mod tests {
         parser.set_code_spaces(true);
         parser.parse_line(""); // Empty line first
         let events = parser.parse_line("    let x = 1;");
-        assert!(events
-            .iter()
-            .any(|e| matches!(e, ParseEvent::CodeBlockStart { .. })));
-        assert!(events
-            .iter()
-            .any(|e| matches!(e, ParseEvent::CodeBlockLine(s) if s == "let x = 1;")));
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, ParseEvent::CodeBlockStart { .. }))
+        );
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, ParseEvent::CodeBlockLine(s) if s == "let x = 1;"))
+        );
     }
 
     #[test]
@@ -892,9 +898,10 @@ mod tests {
         parser.parse_line("- Item 1");
         let e2 = parser.parse_line("  - Nested");
         // Nested item should have indent 2
-        assert!(e2
-            .iter()
-            .any(|e| matches!(e, ParseEvent::ListItem { indent: 2, .. })));
+        assert!(
+            e2.iter()
+                .any(|e| matches!(e, ParseEvent::ListItem { indent: 2, .. }))
+        );
     }
 
     #[test]
@@ -916,35 +923,45 @@ mod tests {
     fn test_parse_blockquote() {
         let mut parser = Parser::new();
         let events = parser.parse_line("> Quote text");
-        assert!(events
-            .iter()
-            .any(|e| matches!(e, ParseEvent::BlockquoteLine(s) if s == "Quote text")));
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, ParseEvent::BlockquoteLine(s) if s == "Quote text"))
+        );
     }
 
     #[test]
     fn test_parse_nested_blockquote() {
         let mut parser = Parser::new();
         let events = parser.parse_line(">> Nested quote");
-        assert!(events
-            .iter()
-            .any(|e| matches!(e, ParseEvent::BlockquoteStart { depth: 2 })));
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, ParseEvent::BlockquoteStart { depth: 2 }))
+        );
     }
 
     #[test]
     fn test_parse_hr() {
         let mut parser = Parser::new();
-        assert!(parser
-            .parse_line("---")
-            .iter()
-            .any(|e| matches!(e, ParseEvent::HorizontalRule)));
-        assert!(parser
-            .parse_line("***")
-            .iter()
-            .any(|e| matches!(e, ParseEvent::HorizontalRule)));
-        assert!(parser
-            .parse_line("___")
-            .iter()
-            .any(|e| matches!(e, ParseEvent::HorizontalRule)));
+        assert!(
+            parser
+                .parse_line("---")
+                .iter()
+                .any(|e| matches!(e, ParseEvent::HorizontalRule))
+        );
+        assert!(
+            parser
+                .parse_line("***")
+                .iter()
+                .any(|e| matches!(e, ParseEvent::HorizontalRule))
+        );
+        assert!(
+            parser
+                .parse_line("___")
+                .iter()
+                .any(|e| matches!(e, ParseEvent::HorizontalRule))
+        );
     }
 
     #[test]
@@ -964,9 +981,10 @@ mod tests {
         let e1 = parser.parse_line("<think>");
         assert!(e1.iter().any(|e| matches!(e, ParseEvent::ThinkBlockStart)));
         let e2 = parser.parse_line("Thinking...");
-        assert!(e2
-            .iter()
-            .any(|e| matches!(e, ParseEvent::ThinkBlockLine(s) if s == "Thinking...")));
+        assert!(
+            e2.iter()
+                .any(|e| matches!(e, ParseEvent::ThinkBlockLine(s) if s == "Thinking..."))
+        );
         let e3 = parser.parse_line("</think>");
         assert!(e3.iter().any(|e| matches!(e, ParseEvent::ThinkBlockEnd)));
     }
@@ -977,9 +995,11 @@ mod tests {
         // First line has 4 spaces indent
         let e1 = parser.parse_line("    # Hello");
         // Should strip the 4 spaces and parse as heading
-        assert!(e1
-            .iter()
-            .any(|e| matches!(e, ParseEvent::Heading { level: 1, content } if content == "Hello")));
+        assert!(
+            e1.iter().any(
+                |e| matches!(e, ParseEvent::Heading { level: 1, content } if content == "Hello")
+            )
+        );
     }
 
     #[test]
@@ -987,12 +1007,16 @@ mod tests {
         let mut parser = Parser::new();
         let doc = "# Title\n\nSome text.\n\n```\ncode\n```";
         let events = parser.parse_document(doc);
-        assert!(events
-            .iter()
-            .any(|e| matches!(e, ParseEvent::Heading { level: 1, .. })));
-        assert!(events
-            .iter()
-            .any(|e| matches!(e, ParseEvent::CodeBlockStart { .. })));
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, ParseEvent::Heading { level: 1, .. }))
+        );
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, ParseEvent::CodeBlockStart { .. }))
+        );
         assert!(events.iter().any(|e| matches!(e, ParseEvent::CodeBlockEnd)));
     }
 
@@ -1007,16 +1031,20 @@ mod tests {
 
     #[test]
     fn test_is_block_is_inline() {
-        assert!(ParseEvent::Heading {
-            level: 1,
-            content: "x".to_string()
-        }
-        .is_block());
-        assert!(ParseEvent::CodeBlockStart {
-            language: None,
-            indent: 0
-        }
-        .is_block());
+        assert!(
+            ParseEvent::Heading {
+                level: 1,
+                content: "x".to_string()
+            }
+            .is_block()
+        );
+        assert!(
+            ParseEvent::CodeBlockStart {
+                language: None,
+                indent: 0
+            }
+            .is_block()
+        );
         assert!(ParseEvent::Text("x".to_string()).is_inline());
         assert!(ParseEvent::Bold("x".to_string()).is_inline());
     }
@@ -1068,7 +1096,11 @@ mod tests {
         // First line: 4 ASCII spaces triggers space-indented code block
         let line1 = "    first line of code";
         let events1 = parser.parse_line(line1);
-        assert!(events1.iter().any(|e| matches!(e, ParseEvent::CodeBlockStart { .. })));
+        assert!(
+            events1
+                .iter()
+                .any(|e| matches!(e, ParseEvent::CodeBlockStart { .. }))
+        );
 
         // Second line: 2 fullwidth spaces (6 bytes) - byte 4 is NOT a char boundary
         // This would panic with buggy code: "byte index 4 is not a char boundary"
@@ -1090,7 +1122,11 @@ mod tests {
 
         // Top-level list item
         let events1 = parser.parse_line("- top level");
-        assert!(events1.iter().any(|e| matches!(e, ParseEvent::ListItem { indent: 0, .. })));
+        assert!(
+            events1
+                .iter()
+                .any(|e| matches!(e, ParseEvent::ListItem { indent: 0, .. }))
+        );
 
         // List item with 1 fullwidth space indent (3 bytes, 1 char)
         // Should be treated as indent 1 (char-based), not indent 3 (byte-based)
@@ -1098,7 +1134,9 @@ mod tests {
         let events2 = parser.parse_line(line2);
 
         // Check that indent is character-based (1), not byte-based (3)
-        let list_item = events2.iter().find(|e| matches!(e, ParseEvent::ListItem { .. }));
+        let list_item = events2
+            .iter()
+            .find(|e| matches!(e, ParseEvent::ListItem { .. }));
         assert!(list_item.is_some(), "Should have parsed list item");
 
         if let Some(ParseEvent::ListItem { indent, .. }) = list_item {
@@ -1124,7 +1162,11 @@ mod tests {
 
         // Enter code block with 4 ASCII spaces
         let events1 = parser.parse_line("    code line");
-        assert!(events1.iter().any(|e| matches!(e, ParseEvent::CodeBlockStart { .. })));
+        assert!(
+            events1
+                .iter()
+                .any(|e| matches!(e, ParseEvent::CodeBlockStart { .. }))
+        );
 
         // Line with 2 fullwidth spaces (6 bytes, 2 chars) should EXIT code block
         // because 2 chars < 4 required indent
@@ -1138,7 +1180,9 @@ mod tests {
 
         // Should have exited code block (CodeBlockEnd event)
         assert!(
-            events2.iter().any(|e| matches!(e, ParseEvent::CodeBlockEnd)),
+            events2
+                .iter()
+                .any(|e| matches!(e, ParseEvent::CodeBlockEnd)),
             "Should have exited code block with only 2-char indent"
         );
     }

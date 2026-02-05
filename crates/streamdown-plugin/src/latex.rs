@@ -579,7 +579,7 @@ mod tests {
         let input = r"\sum_{i=1}^n x_i";
         let result = latex_to_unicode(input);
         assert!(result.contains("Σ")); // Sum symbol
-                                       // Subscripts should be converted
+        // Subscripts should be converted
         assert!(result.contains("ᵢ") || result.contains("i")); // Subscript i or regular i
     }
 

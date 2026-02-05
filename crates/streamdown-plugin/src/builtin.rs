@@ -5,7 +5,7 @@
 //! - Plugin discovery from configuration directory
 //! - Plugin factory functions
 
-use crate::{latex::LatexPlugin, Plugin};
+use crate::{Plugin, latex::LatexPlugin};
 use std::path::Path;
 
 /// Get all built-in plugins.

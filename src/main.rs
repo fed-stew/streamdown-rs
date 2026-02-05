@@ -8,7 +8,7 @@ mod pty;
 
 use clap::Parser as ClapParser;
 use cli::Cli;
-use log::{debug, error, info, trace, LevelFilter};
+use log::{LevelFilter, debug, error, info, trace};
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Write};
 use std::path::Path;
