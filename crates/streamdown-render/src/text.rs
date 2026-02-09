@@ -168,11 +168,10 @@ pub fn text_wrap(
                 // Force truncate if needed
                 if force_truncate {
                     while visible_length(&line_content) > width && line_content.len() > 1 {
-                        // Remove last visible character and add ellipsis
-                        let visible_part = visible(&line_content);
-                        if visible_part.len() > 1 {
-                            // Find the position to truncate
-                            let target_len = visible_part.len() - 2;
+                        let current_width = visible_length(&line_content);
+                        if current_width > 1 {
+                            // Use display width (not byte length) to compute truncation target
+                            let target_len = current_width.saturating_sub(2);
                             line_content = truncate_to_visible(&line_content, target_len);
                             line_content.push('…');
                             truncated = true;
@@ -224,9 +223,10 @@ pub fn text_wrap(
 
         if force_truncate {
             while visible_length(&line_content) > width && line_content.len() > 1 {
-                let visible_part = visible(&line_content);
-                if visible_part.len() > 1 {
-                    let target_len = visible_part.len() - 2;
+                let current_width = visible_length(&line_content);
+                if current_width > 1 {
+                    // Use display width (not byte length) to compute truncation target
+                    let target_len = current_width.saturating_sub(2);
                     line_content = truncate_to_visible(&line_content, target_len);
                     line_content.push('…');
                     truncated = true;
@@ -456,5 +456,42 @@ mod tests {
 
         assert_eq!(words.len(), 3);
         assert_eq!(words[1].chars().count(), 7);
+    }
+
+    #[test]
+    fn test_text_wrap_force_truncate_with_ansi_terminates() {
+        // Regression test: force_truncate with ANSI-styled text wider than
+        // the terminal width must terminate. Previously, the truncation loop
+        // used byte length (visible_part.len()) instead of display width
+        // (visible_length()) to compute the truncation target. Because the
+        // ellipsis '…' is 3 bytes but 1 column wide, each iteration grew
+        // target_len by +1, causing an infinite loop.
+        let styled = "\x1b[1m\x1b[36mThis is a long styled line that exceeds the width\x1b[0m";
+        let result = text_wrap(styled, 20, 0, "", "", true, false);
+        assert!(!result.is_empty(), "Should produce at least one line");
+        for line in &result.lines {
+            assert!(
+                visible_length(line) <= 20,
+                "Line should fit in width 20, got width {}: {:?}",
+                visible_length(line),
+                visible(line),
+            );
+        }
+    }
+
+    #[test]
+    fn test_text_wrap_force_truncate_with_multibyte_terminates() {
+        // Ensure truncation terminates with multi-byte UTF-8 content
+        let text = "│ This—is—a—long—cell—with—em—dashes │";
+        let result = text_wrap(text, 15, 0, "", "", true, false);
+        assert!(!result.is_empty());
+        for line in &result.lines {
+            assert!(
+                visible_length(line) <= 15,
+                "Line should fit in width 15, got width {}: {:?}",
+                visible_length(line),
+                visible(line),
+            );
+        }
     }
 }
