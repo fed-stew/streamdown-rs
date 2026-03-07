@@ -667,6 +667,8 @@ fn test_render_with_custom_style() {
         h5: "#888888".to_string(),
         h6: "#888888".to_string(),
         code_bg: "#111111".to_string(),
+        code_fg: String::new(),
+        code_dim: false,
         code_label: "#ff0000".to_string(),
         bullet: "#0000ff".to_string(),
         table_header_bg: "#333333".to_string(),

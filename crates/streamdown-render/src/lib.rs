@@ -106,6 +106,10 @@ pub struct RenderStyle {
     // Code blocks
     /// Background color for code blocks
     pub code_bg: String,
+    /// Foreground color for inline code
+    pub code_fg: String,
+    /// Whether to apply dim styling to inline code
+    pub code_dim: bool,
     /// Color for code block language labels
     pub code_label: String,
 
@@ -153,6 +157,8 @@ impl Default for RenderStyle {
             h5: "light_grey".to_string(),
             h6: "grey".to_string(),
             code_bg: "black".to_string(),
+            code_fg: String::new(),
+            code_dim: false,
             code_label: "cyan".to_string(),
             bullet: "cyan".to_string(),
             table_header_bg: "blue".to_string(),
@@ -183,6 +189,8 @@ impl RenderStyle {
             h5: computed.grey.clone(),
             h6: computed.grey.clone(),
             code_bg: computed.dark.clone(),
+            code_fg: String::new(),
+            code_dim: false,
             code_label: computed.bright.clone(),
             bullet: computed.symbol.clone(),
             table_header_bg: computed.mid.clone(),
@@ -350,7 +358,9 @@ impl<W: Write> Renderer<W> {
 
             ParseEvent::InlineCode(code) => {
                 let bg = bg_color(&self.style.code_bg);
-                self.write(&format!("{}{} {} {}", bg, DIM_ON, code, RESET))?;
+                let fg = fg_color(&self.style.code_fg);
+                let dim = if self.style.code_dim { DIM_ON } else { "" };
+                self.write(&format!("{}{}{} {} {}", bg, fg, dim, code, RESET))?;
             }
 
             ParseEvent::Bold(text) => {
@@ -645,7 +655,9 @@ impl<W: Write> Renderer<W> {
             }
             InlineElement::Code(s) => {
                 let bg = bg_color(&self.style.code_bg);
-                self.write(&format!("{} {} {}", bg, s, RESET))?
+                let fg = fg_color(&self.style.code_fg);
+                let dim = if self.style.code_dim { DIM_ON } else { "" };
+                self.write(&format!("{}{}{} {} {}", bg, fg, dim, s, RESET))?
             }
             InlineElement::Link { text, url } => {
                 let fg = fg_color(&self.style.link_url);

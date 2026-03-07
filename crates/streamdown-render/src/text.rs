@@ -64,7 +64,7 @@ pub fn split_text(text: &str) -> Vec<String> {
             continue;
         }
 
-        if ch.is_whitespace() {
+        if ch.is_whitespace() && ch != '\u{00a0}' {
             if !current.is_empty() {
                 words.push(std::mem::take(&mut current));
             }
