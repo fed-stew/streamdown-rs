@@ -115,7 +115,7 @@ pub fn render_table_row(
     let bg = if state.is_header {
         bg_color(&style.table_header_bg)
     } else {
-        bg_color(&style.code_bg)
+        bg_color(&style.table_body_bg)
     };
 
     // Wrap each cell's content to fit column width

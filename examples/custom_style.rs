@@ -44,6 +44,7 @@ print(greet("World"))
         bullet: "255;255;0".to_string(),
         // Tables: purple tones
         table_header_bg: "80;60;120".to_string(),
+        table_body_bg: "20;20;60".to_string(),
         table_border: "180;160;220".to_string(),
         // Borders and decorations
         blockquote_border: "0;255;255".to_string(),

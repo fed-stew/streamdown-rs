@@ -670,6 +670,7 @@ fn test_render_with_custom_style() {
         code_label: "#ff0000".to_string(),
         bullet: "#0000ff".to_string(),
         table_header_bg: "#333333".to_string(),
+        table_body_bg: "#111111".to_string(),
         table_border: "#888888".to_string(),
         blockquote_border: "#888888".to_string(),
         think_border: "#888888".to_string(),

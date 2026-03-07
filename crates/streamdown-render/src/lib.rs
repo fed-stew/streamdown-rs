@@ -116,6 +116,8 @@ pub struct RenderStyle {
     // Tables
     /// Background color for table headers
     pub table_header_bg: String,
+    /// Background color for table body rows
+    pub table_body_bg: String,
     /// Color for table borders
     pub table_border: String,
 
@@ -154,6 +156,7 @@ impl Default for RenderStyle {
             code_label: "cyan".to_string(),
             bullet: "cyan".to_string(),
             table_header_bg: "blue".to_string(),
+            table_body_bg: "black".to_string(),
             table_border: "grey".to_string(),
             blockquote_border: "grey".to_string(),
             think_border: "grey".to_string(),
@@ -183,6 +186,7 @@ impl RenderStyle {
             code_label: computed.bright.clone(),
             bullet: computed.symbol.clone(),
             table_header_bg: computed.mid.clone(),
+            table_body_bg: computed.dark.clone(),
             table_border: computed.grey.clone(),
             blockquote_border: computed.grey.clone(),
             think_border: computed.grey.clone(),
