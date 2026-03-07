@@ -147,9 +147,13 @@ fn render_inline_content(content: &str, style: &RenderStyle) -> String {
                 result.push_str(&bg);
                 result.push_str(&fg);
                 result.push_str(dim);
-                result.push('\u{00a0}');
+                if style.code_pad {
+                    result.push('\u{00a0}');
+                }
                 result.push_str(&text);
-                result.push('\u{00a0}');
+                if style.code_pad {
+                    result.push('\u{00a0}');
+                }
                 result.push_str(RESET);
             }
             InlineElement::Link { text, url } => {

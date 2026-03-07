@@ -41,6 +41,7 @@ print(greet("World"))
         code_bg: "20;20;60".to_string(),
         code_fg: String::new(),
         code_dim: true,
+        code_pad: true,
         code_label: "0;255;255".to_string(),
         // Lists: yellow bullets
         bullet: "255;255;0".to_string(),

@@ -110,6 +110,8 @@ pub struct RenderStyle {
     pub code_fg: String,
     /// Whether to apply dim styling to inline code
     pub code_dim: bool,
+    /// Whether to add padding spaces around inline code text
+    pub code_pad: bool,
     /// Color for code block language labels
     pub code_label: String,
 
@@ -159,6 +161,7 @@ impl Default for RenderStyle {
             code_bg: "black".to_string(),
             code_fg: String::new(),
             code_dim: false,
+            code_pad: false,
             code_label: "cyan".to_string(),
             bullet: "cyan".to_string(),
             table_header_bg: "blue".to_string(),
@@ -191,6 +194,7 @@ impl RenderStyle {
             code_bg: computed.dark.clone(),
             code_fg: String::new(),
             code_dim: false,
+            code_pad: false,
             code_label: computed.bright.clone(),
             bullet: computed.symbol.clone(),
             table_header_bg: computed.mid.clone(),
@@ -360,7 +364,8 @@ impl<W: Write> Renderer<W> {
                 let bg = bg_color(&self.style.code_bg);
                 let fg = fg_color(&self.style.code_fg);
                 let dim = if self.style.code_dim { DIM_ON } else { "" };
-                self.write(&format!("{}{}{} {} {}", bg, fg, dim, code, RESET))?;
+                let pad = if self.style.code_pad { " " } else { "" };
+                self.write(&format!("{}{}{}{}{}{}{}", bg, fg, dim, pad, code, pad, RESET))?;
             }
 
             ParseEvent::Bold(text) => {
@@ -657,7 +662,8 @@ impl<W: Write> Renderer<W> {
                 let bg = bg_color(&self.style.code_bg);
                 let fg = fg_color(&self.style.code_fg);
                 let dim = if self.style.code_dim { DIM_ON } else { "" };
-                self.write(&format!("{}{}{} {} {}", bg, fg, dim, s, RESET))?
+                let pad = if self.style.code_pad { " " } else { "" };
+                self.write(&format!("{}{}{}{}{}{}{}", bg, fg, dim, pad, s, pad, RESET))?
             }
             InlineElement::Link { text, url } => {
                 let fg = fg_color(&self.style.link_url);
