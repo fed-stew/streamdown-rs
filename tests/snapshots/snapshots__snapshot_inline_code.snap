@@ -1,5 +1,6 @@
 ---
 source: tests/snapshots.rs
+assertion_line: 173
 expression: output
 ---
-Use  code  inline.
+Use code inline.

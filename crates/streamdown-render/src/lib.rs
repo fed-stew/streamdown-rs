@@ -43,7 +43,7 @@ pub use features::{
 };
 pub use heading::render_heading;
 pub use list::{BULLETS, ListState, render_list_item};
-pub use table::{TableState, render_table_row, render_table_separator};
+pub use table::{TableState, render_buffered_table};
 pub use text::{WrappedText, simple_wrap, split_text, text_wrap};
 
 use std::io::Write;
@@ -531,40 +531,30 @@ impl<W: Write> Renderer<W> {
             ParseEvent::TableHeader(cells) => {
                 self.table_state.reset();
                 self.table_state.is_header = true;
-
-                let width = self.current_width();
-                let margin = self.left_margin();
-                let style = self.style.clone();
-                let lines =
-                    render_table_row(cells, &mut self.table_state, width, &margin, &style, false);
-                for line in lines {
-                    self.writeln(&line)?;
-                }
+                self.table_state.header_cells = Some(cells.clone());
             }
 
             ParseEvent::TableRow(cells) => {
-                let width = self.current_width();
-                let margin = self.left_margin();
-                let style = self.style.clone();
-                let lines =
-                    render_table_row(cells, &mut self.table_state, width, &margin, &style, false);
-                for line in lines {
-                    self.writeln(&line)?;
-                }
+                self.table_state.body_rows.push(cells.clone());
             }
 
             ParseEvent::TableSeparator => {
-                let sep = render_table_separator(
-                    &self.table_state,
-                    self.current_width(),
-                    &self.left_margin(),
-                    &self.style,
-                );
-                self.writeln(&sep)?;
                 self.table_state.end_header();
             }
 
             ParseEvent::TableEnd => {
+                let width = self.current_width();
+                let margin = self.left_margin();
+                let style = self.style.clone();
+                let lines = render_buffered_table(
+                    &mut self.table_state,
+                    width,
+                    &margin,
+                    &style,
+                );
+                for line in lines {
+                    self.writeln(&line)?;
+                }
                 self.table_state.reset();
             }
 
@@ -838,6 +828,10 @@ mod tests {
         let result = String::from_utf8(output).unwrap();
         assert!(result.contains("A"));
         assert!(result.contains("1"));
+        // Verify grid border characters are present
+        assert!(result.contains("┌"));
+        assert!(result.contains("└"));
+        assert!(result.contains("│"));
     }
 
     #[test]

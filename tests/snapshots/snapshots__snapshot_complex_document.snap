@@ -1,5 +1,6 @@
 ---
 source: tests/snapshots.rs
+assertion_line: 264
 expression: output
 ---
 
@@ -24,10 +25,13 @@ def greet(name):
     ◦ Nested items
 • Tables
 
- Feature                                │ Status                                
-────────────────────────────────────────────────────────────────────────────────
- Parser                                 │ Done                                  
- Render                                 │ Done                                  
+┌──────────┬──────────┐
+│ Feature  │ Status   │
+├──────────┼──────────┤
+│ Parser   │ Done     │
+├──────────┼──────────┤
+│ Render   │ Done     │
+└──────────┴──────────┘
 
 │ A wise quote.
 
