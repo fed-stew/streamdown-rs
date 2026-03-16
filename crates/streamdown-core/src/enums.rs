@@ -71,6 +71,28 @@ impl std::fmt::Display for TableState {
     }
 }
 
+/// Represents the alignment of a table column.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ColumnAlignment {
+    Left,
+    Center,
+    Right,
+}
+
+impl Default for ColumnAlignment {
+    fn default() -> Self { Self::Left }
+}
+
+impl std::fmt::Display for ColumnAlignment {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ColumnAlignment::Left => write!(f, "left"),
+            ColumnAlignment::Center => write!(f, "center"),
+            ColumnAlignment::Right => write!(f, "right"),
+        }
+    }
+}
+
 /// Represents the type of block-level element being processed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum BlockType {
@@ -136,6 +158,18 @@ mod tests {
     fn test_table_state_display() {
         assert_eq!(TableState::Header.to_string(), "header");
         assert_eq!(TableState::Body.to_string(), "body");
+    }
+
+    #[test]
+    fn test_column_alignment_display() {
+        assert_eq!(ColumnAlignment::Left.to_string(), "left");
+        assert_eq!(ColumnAlignment::Center.to_string(), "center");
+        assert_eq!(ColumnAlignment::Right.to_string(), "right");
+    }
+
+    #[test]
+    fn test_column_alignment_default() {
+        assert_eq!(ColumnAlignment::default(), ColumnAlignment::Left);
     }
 
     #[test]

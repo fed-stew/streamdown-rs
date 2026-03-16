@@ -543,7 +543,8 @@ impl<W: Write> Renderer<W> {
                 self.table_state.body_rows.push(cells.clone());
             }
 
-            ParseEvent::TableSeparator => {
+            ParseEvent::TableSeparator(alignments) => {
+                self.table_state.column_alignments = alignments.clone();
                 self.table_state.end_header();
             }
 
@@ -821,7 +822,7 @@ mod tests {
                 "B".to_string(),
             ]))
             .unwrap();
-        renderer.render_event(&ParseEvent::TableSeparator).unwrap();
+        renderer.render_event(&ParseEvent::TableSeparator(vec![])).unwrap();
         renderer
             .render_event(&ParseEvent::TableRow(vec![
                 "1".to_string(),

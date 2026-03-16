@@ -7,6 +7,7 @@ use crate::text::text_wrap;
 use crate::{bg_color, fg_color};
 use streamdown_ansi::codes::RESET;
 use streamdown_ansi::utils::visible_length;
+use streamdown_core::ColumnAlignment;
 use streamdown_parser::inline::format_line;
 
 /// Minimum column width (characters)
@@ -27,6 +28,8 @@ pub struct TableState {
     pub header_cells: Option<Vec<String>>,
     /// Buffered body rows
     pub body_rows: Vec<Vec<String>>,
+    /// Column alignments parsed from separator row
+    pub column_alignments: Vec<ColumnAlignment>,
 }
 
 impl TableState {
@@ -39,6 +42,7 @@ impl TableState {
             available_width: 80,
             header_cells: None,
             body_rows: Vec::new(),
+            column_alignments: Vec::new(),
         }
     }
 
@@ -62,6 +66,7 @@ impl TableState {
         self.num_columns = 0;
         self.header_cells = None;
         self.body_rows.clear();
+        self.column_alignments.clear();
     }
 }
 
@@ -105,6 +110,7 @@ fn render_content_row(
     left_margin: &str,
     border_fg: &str,
     bg: &str,
+    alignments: &[ColumnAlignment],
 ) -> Vec<String> {
     let num_cols = state.num_columns;
 
@@ -147,12 +153,31 @@ fn render_content_row(
                 .unwrap_or_default();
             let content_len = visible_length(&content);
             let padding = col_width.saturating_sub(content_len);
+            let alignment = alignments.get(col_idx).copied().unwrap_or(ColumnAlignment::Left);
 
-            // Border then cell content
-            line.push_str(&format!(
-                "{}│{} {}{}{}",
-                border_fg, bg, content, " ".repeat(padding + 1), RESET
-            ));
+            // Border then cell content with alignment
+            match alignment {
+                ColumnAlignment::Left => {
+                    line.push_str(&format!(
+                        "{}│{} {}{}{}",
+                        border_fg, bg, content, " ".repeat(padding + 1), RESET
+                    ));
+                }
+                ColumnAlignment::Right => {
+                    line.push_str(&format!(
+                        "{}│{}{}{}{}{}",
+                        border_fg, bg, " ".repeat(padding + 1), content, " ", RESET
+                    ));
+                }
+                ColumnAlignment::Center => {
+                    let left_pad = padding / 2;
+                    let right_pad = padding - left_pad;
+                    line.push_str(&format!(
+                        "{}│{}{}{}{}{}",
+                        border_fg, bg, " ".repeat(left_pad + 1), content, " ".repeat(right_pad + 1), RESET
+                    ));
+                }
+            }
         }
 
         // Closing border
@@ -255,7 +280,7 @@ pub fn render_buffered_table(
 
     // Header row (using pre-formatted cells)
     let header_lines =
-        render_content_row(&formatted_header, state, left_margin, &border_fg, &header_bg);
+        render_content_row(&formatted_header, state, left_margin, &border_fg, &header_bg, &state.column_alignments);
     lines.extend(header_lines);
 
     // Header separator (only if there are body rows)
@@ -273,7 +298,7 @@ pub fn render_buffered_table(
     // Body rows (using pre-formatted cells)
     let num_body_rows = formatted_body.len();
     for (i, row) in formatted_body.iter().enumerate() {
-        let row_lines = render_content_row(row, state, left_margin, &border_fg, &body_bg);
+        let row_lines = render_content_row(row, state, left_margin, &border_fg, &body_bg, &state.column_alignments);
         lines.extend(row_lines);
 
         // Separator between body rows (not after last)

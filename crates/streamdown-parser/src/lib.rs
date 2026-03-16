@@ -36,7 +36,7 @@ pub use tokenizer::{Token, Tokenizer, cjk_count, is_cjk, not_text};
 
 use regex::Regex;
 use std::sync::LazyLock;
-use streamdown_core::{BlockType, Code, ListType, ParseState};
+use streamdown_core::{BlockType, Code, ColumnAlignment, ListType, ParseState};
 
 // =============================================================================
 // Regex patterns
@@ -72,6 +72,24 @@ static TABLE_ROW_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*\|(.+)\
 
 /// Regex for table separator (only contains |, -, :, spaces)
 static TABLE_SEP_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[\s|:-]+$").unwrap());
+
+// =============================================================================
+// Helpers
+// =============================================================================
+
+/// Parse column alignments from a table separator row's inner text.
+fn parse_alignments(inner: &str) -> Vec<ColumnAlignment> {
+    inner.split('|')
+        .map(|s| {
+            let s = s.trim();
+            match (s.starts_with(':'), s.ends_with(':')) {
+                (true, true) => ColumnAlignment::Center,
+                (false, true) => ColumnAlignment::Right,
+                _ => ColumnAlignment::Left,
+            }
+        })
+        .collect()
+}
 
 // =============================================================================
 // Types
@@ -166,7 +184,7 @@ pub enum ParseEvent {
     ListEnd,
     TableHeader(Vec<String>),
     TableRow(Vec<String>),
-    TableSeparator,
+    TableSeparator(Vec<ColumnAlignment>),
     TableEnd,
     BlockquoteStart {
         depth: usize,
@@ -723,7 +741,8 @@ impl Parser {
             if TABLE_SEP_RE.is_match(inner) && self.table_state == Some(TableState::Header) {
                 self.table_state = Some(TableState::Body);
                 self.state.in_table = Some(Code::Body);
-                self.events.push(ParseEvent::TableSeparator);
+                let alignments = parse_alignments(inner);
+                self.events.push(ParseEvent::TableSeparator(alignments));
                 return true;
             }
 
@@ -1010,7 +1029,7 @@ mod tests {
         let e1 = parser.parse_line("| A | B | C |");
         assert!(e1.iter().any(|e| matches!(e, ParseEvent::TableHeader(_))));
         let e2 = parser.parse_line("|---|---|---|");
-        assert!(e2.iter().any(|e| matches!(e, ParseEvent::TableSeparator)));
+        assert!(e2.iter().any(|e| matches!(e, ParseEvent::TableSeparator(_))));
         let e3 = parser.parse_line("| 1 | 2 | 3 |");
         assert!(e3.iter().any(|e| matches!(e, ParseEvent::TableRow(_))));
     }
