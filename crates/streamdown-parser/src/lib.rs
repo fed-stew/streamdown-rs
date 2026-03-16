@@ -31,7 +31,7 @@ pub mod inline;
 pub mod tokenizer;
 
 pub use entities::decode_html_entities;
-pub use inline::{InlineElement, InlineParser, format_line};
+pub use inline::{InlineCodeStyle, InlineElement, InlineParser, format_line};
 pub use tokenizer::{Token, Tokenizer, cjk_count, is_cjk, not_text};
 
 use regex::Regex;

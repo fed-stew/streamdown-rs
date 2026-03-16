@@ -8,7 +8,7 @@ use crate::{bg_color, fg_color};
 use streamdown_ansi::codes::RESET;
 use streamdown_ansi::utils::visible_length;
 use streamdown_core::ColumnAlignment;
-use streamdown_parser::inline::format_line;
+use streamdown_parser::inline::{format_line, InlineCodeStyle};
 
 /// Minimum column width (characters)
 const MIN_COL_WIDTH: usize = 8;
@@ -208,15 +208,23 @@ pub fn render_buffered_table(
         return Vec::new();
     }
 
+    // Build inline code style from RenderStyle
+    let code_style = InlineCodeStyle {
+        fg: fg_color(&style.code_fg),
+        bg: bg_color(&style.code_bg),
+        dim: style.code_dim,
+        pad: style.code_pad,
+    };
+
     // Pre-format ALL cells once (format-once-and-cache)
     let formatted_header: Vec<String> = header
         .iter()
-        .map(|c| format_line(c, true, true))
+        .map(|c| format_line(c, true, true, Some(&code_style)))
         .collect();
     let formatted_body: Vec<Vec<String>> = state
         .body_rows
         .iter()
-        .map(|row| row.iter().map(|c| format_line(c, true, true)).collect())
+        .map(|row| row.iter().map(|c| format_line(c, true, true, Some(&code_style))).collect())
         .collect();
 
     // Compute column widths from pre-formatted strings

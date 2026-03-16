@@ -370,11 +370,24 @@ fn number_to_superscript(num: u32) -> String {
         .collect()
 }
 
+/// Style configuration for inline code rendering.
+#[derive(Debug, Clone)]
+pub struct InlineCodeStyle {
+    /// ANSI foreground sequence (pre-computed via `fg_color`)
+    pub fg: String,
+    /// ANSI background sequence (pre-computed via `bg_color`)
+    pub bg: String,
+    /// Whether to apply dim
+    pub dim: bool,
+    /// Whether to add padding around code
+    pub pad: bool,
+}
+
 /// Format a line with inline markdown.
 ///
 /// This is a convenience function that parses a line and returns
 /// the formatted result as ANSI-styled text.
-pub fn format_line(line: &str, process_links: bool, process_images: bool) -> String {
+pub fn format_line(line: &str, process_links: bool, process_images: bool, code_style: Option<&InlineCodeStyle>) -> String {
     use streamdown_ansi::codes::*;
     use streamdown_ansi::style::*;
 
@@ -414,9 +427,25 @@ pub fn format_line(line: &str, process_links: bool, process_images: bool) -> Str
                 result.push_str(STRIKEOUT.1);
             }
             InlineElement::Code(s) => {
-                result.push_str(DIM_ON);
-                result.push_str(&s);
-                result.push_str(DIM_OFF);
+                if let Some(cs) = code_style {
+                    result.push_str(&cs.bg);
+                    result.push_str(&cs.fg);
+                    if cs.dim {
+                        result.push_str(DIM_ON);
+                    }
+                    if cs.pad {
+                        result.push(' ');
+                    }
+                    result.push_str(&s);
+                    if cs.pad {
+                        result.push(' ');
+                    }
+                    result.push_str(RESET);
+                } else {
+                    result.push_str(DIM_ON);
+                    result.push_str(&s);
+                    result.push_str(DIM_OFF);
+                }
             }
             InlineElement::Link { text, url } => {
                 result.push_str(LINK.0);
@@ -687,7 +716,7 @@ mod tests {
 
     #[test]
     fn test_format_line() {
-        let result = format_line("Hello **bold** world", true, true);
+        let result = format_line("Hello **bold** world", true, true, None);
         assert!(result.contains("bold"));
         assert!(result.contains("\x1b[1m")); // Bold on
         assert!(result.contains("\x1b[22m")); // Bold off
