@@ -156,11 +156,17 @@ fn run_stdin(cli: &Cli, style: &ComputedStyle, features: &RenderFeatures) -> io:
     let theme = cli.theme.clone();
     let no_highlight = cli.no_highlight;
 
-    // Use a buffer for output
-    let mut output = Vec::new();
     let mut parser = MarkdownParser::new();
     let mut plugin_manager = PluginManager::with_builtins();
     let parse_state = streamdown_core::state::ParseState::new();
+
+    // Renderer persists across lines so table state survives buffering
+    let mut stdout = io::BufWriter::new(io::stdout());
+    let mut renderer = Renderer::with_style(&mut stdout, width, render_style);
+    renderer.set_features(features.clone());
+    if !no_highlight {
+        renderer.set_theme(&theme);
+    }
 
     // Read stdin line by line for streaming
     for line in stdin.lock().lines() {
@@ -170,38 +176,29 @@ fn run_stdin(cli: &Cli, style: &ComputedStyle, features: &RenderFeatures) -> io:
         // Check plugins first
         if let Some(plugin_output) = plugin_manager.process_line(&line, &parse_state, style) {
             for output_line in plugin_output {
-                writeln!(output, "{}", output_line)?;
+                writeln!(renderer.writer_mut(), "{}", output_line)?;
             }
-            // Flush output
-            io::stdout().write_all(&output)?;
-            io::stdout().flush()?;
-            output.clear();
+            renderer.writer_mut().flush()?;
             continue;
         }
 
         // Parse and render
-        {
-            let mut renderer = Renderer::with_style(&mut output, width, render_style.clone());
-            renderer.set_features(features.clone());
-            if !no_highlight {
-                renderer.set_theme(&theme);
-            }
-            emit_line(&line, &mut parser, &mut renderer, cli)?;
-        }
+        emit_line(&line, &mut parser, &mut renderer, cli)?;
+    }
 
-        // Flush output
-        io::stdout().write_all(&output)?;
-        io::stdout().flush()?;
-        output.clear();
+    // Finalize parser (flushes buffered tables, etc.)
+    for event in parser.finalize() {
+        trace!("Finalize event: {:?}", event);
+        renderer.render_event(&event)?;
     }
 
     // Flush any remaining plugin content
     let plugin_output = plugin_manager.flush();
     for line in plugin_output {
-        writeln!(io::stdout(), "{}", line)?;
+        writeln!(renderer.writer_mut(), "{}", line)?;
     }
 
-    io::stdout().flush()?;
+    renderer.writer_mut().flush()?;
     Ok(())
 }
 
@@ -223,33 +220,41 @@ fn run_files(cli: &Cli, style: &ComputedStyle, features: &RenderFeatures) -> io:
         let mut plugin_manager = PluginManager::with_builtins();
         let parse_state = streamdown_core::state::ParseState::new();
 
+        // Renderer persists across lines so table state survives buffering
+        let mut renderer = Renderer::with_style(&mut output, width, render_style.clone());
+        renderer.set_features(features.clone());
+        if !no_highlight {
+            renderer.set_theme(&theme);
+        }
+
         for line in reader.lines() {
             let line = line?;
 
             // Check plugins first
             if let Some(plugin_output) = plugin_manager.process_line(&line, &parse_state, style) {
                 for output_line in plugin_output {
-                    writeln!(output, "{}", output_line)?;
+                    writeln!(renderer.writer_mut(), "{}", output_line)?;
                 }
                 continue;
             }
 
             // Parse and render
-            {
-                let mut renderer = Renderer::with_style(&mut output, width, render_style.clone());
-                renderer.set_features(features.clone());
-                if !no_highlight {
-                    renderer.set_theme(&theme);
-                }
-                emit_line(&line, &mut parser, &mut renderer, cli)?;
-            }
+            emit_line(&line, &mut parser, &mut renderer, cli)?;
+        }
+
+        // Finalize parser (flushes buffered tables, etc.)
+        for event in parser.finalize() {
+            renderer.render_event(&event)?;
         }
 
         // Flush remaining plugin content
         let plugin_output = plugin_manager.flush();
         for line in plugin_output {
-            writeln!(output, "{}", line)?;
+            writeln!(renderer.writer_mut(), "{}", line)?;
         }
+
+        // Drop renderer to release borrow on output
+        drop(renderer);
 
         // Write all output
         io::stdout().write_all(&output)?;
@@ -295,6 +300,13 @@ fn run_exec(
     let mut plugin_manager = PluginManager::with_builtins();
     let parse_state = streamdown_core::state::ParseState::new();
 
+    // Renderer persists across lines so table state survives buffering
+    let mut renderer = Renderer::with_style(&mut output, width, render_style);
+    renderer.set_features(features.clone());
+    if !no_highlight {
+        renderer.set_theme(&theme);
+    }
+
     // Line buffer for accumulating output
     let mut line_buffer = String::new();
     let timeout = Duration::from_millis(100);
@@ -327,17 +339,12 @@ fn run_exec(
                     process_master_output(
                         &mut session,
                         &mut line_buffer,
-                        &mut output,
                         &mut parser,
+                        &mut renderer,
                         &mut plugin_manager,
                         &parse_state,
                         style,
                         &prompt_regex,
-                        width,
-                        &render_style,
-                        &theme,
-                        no_highlight,
-                        features,
                         cli,
                     )?;
                 }
@@ -347,17 +354,12 @@ fn run_exec(
                 process_master_output(
                     &mut session,
                     &mut line_buffer,
-                    &mut output,
                     &mut parser,
+                    &mut renderer,
                     &mut plugin_manager,
                     &parse_state,
                     style,
                     &prompt_regex,
-                    width,
-                    &render_style,
-                    &theme,
-                    no_highlight,
-                    features,
                     cli,
                 )?;
             }
@@ -379,6 +381,11 @@ fn run_exec(
         }
     }
 
+    // Finalize parser (flushes buffered tables, etc.)
+    for event in parser.finalize() {
+        renderer.render_event(&event)?;
+    }
+
     // Flush remaining content
     if !line_buffer.is_empty() {
         println!("{}", line_buffer);
@@ -386,9 +393,14 @@ fn run_exec(
 
     let plugin_output = plugin_manager.flush();
     for line in plugin_output {
-        writeln!(io::stdout(), "{}", line)?;
+        writeln!(renderer.writer_mut(), "{}", line)?;
     }
 
+    // Drop renderer to release borrow on output
+    drop(renderer);
+
+    // Flush any remaining output
+    io::stdout().write_all(&output)?;
     io::stdout().flush()?;
 
     // Wait for child
@@ -400,20 +412,15 @@ fn run_exec(
 
 /// Process output from the master side of the PTY.
 #[allow(clippy::too_many_arguments)]
-fn process_master_output(
+fn process_master_output<W: Write>(
     session: &mut pty::PtySession,
     line_buffer: &mut String,
-    output: &mut Vec<u8>,
     parser: &mut MarkdownParser,
+    renderer: &mut Renderer<W>,
     plugin_manager: &mut PluginManager,
     parse_state: &streamdown_core::state::ParseState,
     style: &ComputedStyle,
     prompt_regex: &regex::Regex,
-    width: usize,
-    render_style: &RenderStyle,
-    theme: &str,
-    no_highlight: bool,
-    features: &RenderFeatures,
     cli: &Cli,
 ) -> io::Result<()> {
     let mut buf = [0u8; 1024];
@@ -451,29 +458,13 @@ fn process_master_output(
                 if let Some(plugin_output) = plugin_manager.process_line(&line, parse_state, style)
                 {
                     for output_line in plugin_output {
-                        writeln!(output, "{}", output_line)?;
+                        writeln!(renderer.writer_mut(), "{}", output_line)?;
                     }
-                    io::stdout().write_all(output)?;
-                    io::stdout().flush()?;
-                    output.clear();
                     continue;
                 }
 
                 // Parse and render
-                {
-                    let mut renderer =
-                        Renderer::with_style(&mut *output, width, render_style.clone());
-                    renderer.set_features(features.clone());
-                    if !no_highlight {
-                        renderer.set_theme(theme);
-                    }
-                    emit_line(&line, parser, &mut renderer, cli)?;
-                }
-
-                // Flush output
-                io::stdout().write_all(output)?;
-                io::stdout().flush()?;
-                output.clear();
+                emit_line(&line, parser, renderer, cli)?;
             } else if byte == b'\r' {
                 // Ignore carriage returns
             } else {

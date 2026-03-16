@@ -317,6 +317,11 @@ impl<W: Write> Renderer<W> {
         &self.features
     }
 
+    /// Get mutable access to the underlying writer.
+    pub fn writer_mut(&mut self) -> &mut W {
+        &mut self.writer
+    }
+
     /// Calculate the left margin based on current state.
     fn left_margin(&self) -> String {
         if self.in_blockquote {
