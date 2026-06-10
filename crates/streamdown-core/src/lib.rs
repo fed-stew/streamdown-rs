@@ -16,7 +16,7 @@ pub mod error;
 pub mod state;
 pub mod types;
 
-pub use enums::{BlockType, Code, EmitFlag, ListType, TableState};
+pub use enums::{BlockType, Code, ColumnAlignment, EmitFlag, ListType, TableState};
 pub use error::{Result, StreamdownError};
 pub use state::{InlineState, ParseState};
 pub use types::{Position, Span};

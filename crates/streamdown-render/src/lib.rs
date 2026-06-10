@@ -43,12 +43,13 @@ pub use features::{
 };
 pub use heading::render_heading;
 pub use list::{BULLETS, ListState, render_list_item};
-pub use table::{TableState, render_table_row, render_table_separator};
+pub use table::{TableState, render_buffered_table};
 pub use text::{WrappedText, simple_wrap, split_text, text_wrap};
 
 use std::io::Write;
 
 use serde::{Deserialize, Serialize};
+use streamdown_config::ComputedStyle;
 use streamdown_ansi::codes::{
     BOLD_OFF, BOLD_ON, DIM_ON, ITALIC_OFF, ITALIC_ON, RESET, STRIKEOUT_OFF, STRIKEOUT_ON,
     UNDERLINE_OFF, UNDERLINE_ON,
@@ -105,6 +106,12 @@ pub struct RenderStyle {
     // Code blocks
     /// Background color for code blocks
     pub code_bg: String,
+    /// Foreground color for inline code
+    pub code_fg: String,
+    /// Whether to apply dim styling to inline code
+    pub code_dim: bool,
+    /// Whether to add padding spaces around inline code text
+    pub code_pad: bool,
     /// Color for code block language labels
     pub code_label: String,
 
@@ -115,6 +122,8 @@ pub struct RenderStyle {
     // Tables
     /// Background color for table headers
     pub table_header_bg: String,
+    /// Background color for table body rows
+    pub table_body_bg: String,
     /// Color for table borders
     pub table_border: String,
 
@@ -133,6 +142,10 @@ pub struct RenderStyle {
     pub image_marker: String,
     /// Color for footnote markers
     pub footnote: String,
+
+    // Layout
+    /// Whether h1/h2 headings should be centered (default: true)
+    pub heading_centered: bool,
 }
 
 impl Default for RenderStyle {
@@ -146,9 +159,13 @@ impl Default for RenderStyle {
             h5: "light_grey".to_string(),
             h6: "grey".to_string(),
             code_bg: "black".to_string(),
+            code_fg: String::new(),
+            code_dim: false,
+            code_pad: false,
             code_label: "cyan".to_string(),
             bullet: "cyan".to_string(),
             table_header_bg: "blue".to_string(),
+            table_body_bg: "black".to_string(),
             table_border: "grey".to_string(),
             blockquote_border: "grey".to_string(),
             think_border: "grey".to_string(),
@@ -156,6 +173,40 @@ impl Default for RenderStyle {
             link_url: "grey".to_string(),
             image_marker: "cyan".to_string(),
             footnote: "cyan".to_string(),
+            heading_centered: true,
+        }
+    }
+}
+
+impl RenderStyle {
+    /// Create a RenderStyle from a ComputedStyle.
+    ///
+    /// Maps the semantic color roles from ComputedStyle to the
+    /// element-specific fields in RenderStyle.
+    pub fn from_computed(computed: &ComputedStyle) -> Self {
+        Self {
+            h1: computed.head.clone(),
+            h2: computed.head.clone(),
+            h3: computed.bright.clone(),
+            h4: computed.bright.clone(),
+            h5: computed.grey.clone(),
+            h6: computed.grey.clone(),
+            code_bg: computed.dark.clone(),
+            code_fg: String::new(),
+            code_dim: false,
+            code_pad: false,
+            code_label: computed.bright.clone(),
+            bullet: computed.symbol.clone(),
+            table_header_bg: computed.mid.clone(),
+            table_body_bg: computed.dark.clone(),
+            table_border: computed.grey.clone(),
+            blockquote_border: computed.grey.clone(),
+            think_border: computed.grey.clone(),
+            hr: computed.grey.clone(),
+            link_url: computed.bright.clone(),
+            image_marker: computed.symbol.clone(),
+            footnote: computed.bright.clone(),
+            heading_centered: true,
         }
     }
 }
@@ -266,6 +317,11 @@ impl<W: Write> Renderer<W> {
         &self.features
     }
 
+    /// Get mutable access to the underlying writer.
+    pub fn writer_mut(&mut self) -> &mut W {
+        &mut self.writer
+    }
+
     /// Calculate the left margin based on current state.
     fn left_margin(&self) -> String {
         if self.in_blockquote {
@@ -311,7 +367,10 @@ impl<W: Write> Renderer<W> {
 
             ParseEvent::InlineCode(code) => {
                 let bg = bg_color(&self.style.code_bg);
-                self.write(&format!("{}{} {} {}", bg, DIM_ON, code, RESET))?;
+                let fg = fg_color(&self.style.code_fg);
+                let dim = if self.style.code_dim { DIM_ON } else { "" };
+                let pad = if self.style.code_pad { " " } else { "" };
+                self.write(&format!("{}{}{}{}{}{}{}", bg, fg, dim, pad, code, pad, RESET))?;
             }
 
             ParseEvent::Bold(text) => {
@@ -477,40 +536,31 @@ impl<W: Write> Renderer<W> {
             ParseEvent::TableHeader(cells) => {
                 self.table_state.reset();
                 self.table_state.is_header = true;
-
-                let width = self.current_width();
-                let margin = self.left_margin();
-                let style = self.style.clone();
-                let lines =
-                    render_table_row(cells, &mut self.table_state, width, &margin, &style, false);
-                for line in lines {
-                    self.writeln(&line)?;
-                }
+                self.table_state.header_cells = Some(cells.clone());
             }
 
             ParseEvent::TableRow(cells) => {
-                let width = self.current_width();
-                let margin = self.left_margin();
-                let style = self.style.clone();
-                let lines =
-                    render_table_row(cells, &mut self.table_state, width, &margin, &style, false);
-                for line in lines {
-                    self.writeln(&line)?;
-                }
+                self.table_state.body_rows.push(cells.clone());
             }
 
-            ParseEvent::TableSeparator => {
-                let sep = render_table_separator(
-                    &self.table_state,
-                    self.current_width(),
-                    &self.left_margin(),
-                    &self.style,
-                );
-                self.writeln(&sep)?;
+            ParseEvent::TableSeparator(alignments) => {
+                self.table_state.column_alignments = alignments.clone();
                 self.table_state.end_header();
             }
 
             ParseEvent::TableEnd => {
+                let width = self.current_width();
+                let margin = self.left_margin();
+                let style = self.style.clone();
+                let lines = render_buffered_table(
+                    &mut self.table_state,
+                    width,
+                    &margin,
+                    &style,
+                );
+                for line in lines {
+                    self.writeln(&line)?;
+                }
                 self.table_state.reset();
             }
 
@@ -606,7 +656,10 @@ impl<W: Write> Renderer<W> {
             }
             InlineElement::Code(s) => {
                 let bg = bg_color(&self.style.code_bg);
-                self.write(&format!("{} {} {}", bg, s, RESET))?
+                let fg = fg_color(&self.style.code_fg);
+                let dim = if self.style.code_dim { DIM_ON } else { "" };
+                let pad = if self.style.code_pad { " " } else { "" };
+                self.write(&format!("{}{}{}{}{}{}{}", bg, fg, dim, pad, s, pad, RESET))?
             }
             InlineElement::Link { text, url } => {
                 let fg = fg_color(&self.style.link_url);
@@ -769,7 +822,7 @@ mod tests {
                 "B".to_string(),
             ]))
             .unwrap();
-        renderer.render_event(&ParseEvent::TableSeparator).unwrap();
+        renderer.render_event(&ParseEvent::TableSeparator(vec![])).unwrap();
         renderer
             .render_event(&ParseEvent::TableRow(vec![
                 "1".to_string(),
@@ -781,6 +834,10 @@ mod tests {
         let result = String::from_utf8(output).unwrap();
         assert!(result.contains("A"));
         assert!(result.contains("1"));
+        // Verify grid border characters are present
+        assert!(result.contains("┌"));
+        assert!(result.contains("└"));
+        assert!(result.contains("│"));
     }
 
     #[test]

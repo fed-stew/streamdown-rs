@@ -1,5 +1,6 @@
 ---
 source: tests/snapshots.rs
+assertion_line: 179
 expression: output
 ---
-Bold, italic, and  code  together.
+Bold, italic, and code together.

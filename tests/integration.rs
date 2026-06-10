@@ -6,7 +6,7 @@
 use std::fs;
 use std::path::PathBuf;
 
-use streamdown_parser::{ParseEvent, Parser};
+use streamdown_parser::{ListBullet, ParseEvent, Parser};
 use streamdown_render::{RenderStyle, Renderer};
 
 /// Get the path to Python Streamdown test files.
@@ -443,6 +443,27 @@ fn test_deeply_nested_lists() {
 }
 
 #[test]
+fn test_loose_ordered_list() {
+    // Loose ordered lists (blank lines between items) should keep numbering
+    let content = "1. First\n   - sub-item\n\n2. Second\n   - sub-item\n\n3. Third\n   - sub-item";
+
+    let events = parse_document(content);
+
+    let ordered_nums: Vec<usize> = events
+        .iter()
+        .filter_map(|e| match e {
+            ParseEvent::ListItem {
+                bullet: streamdown_parser::ListBullet::Ordered(n),
+                ..
+            } => Some(*n),
+            _ => None,
+        })
+        .collect();
+
+    assert_eq!(ordered_nums, vec![1, 2, 3], "Loose ordered list should number 1, 2, 3");
+}
+
+#[test]
 fn test_mixed_content() {
     let content = r#"# Heading
 
@@ -508,6 +529,128 @@ fn test_emoji_content() {
 }
 
 // =============================================================================
+// Loose List Edge Case Tests
+// =============================================================================
+
+#[test]
+fn test_loose_unordered_list() {
+    let mut parser = Parser::new();
+    let mut events = Vec::new();
+
+    for line in "- First\n\n- Second\n\n- Third".lines() {
+        events.extend(parser.parse_line(line));
+    }
+    events.extend(parser.finalize());
+
+    let list_items: Vec<_> = events
+        .iter()
+        .filter(|e| matches!(e, ParseEvent::ListItem { bullet: ListBullet::Dash, .. }))
+        .collect();
+    assert_eq!(list_items.len(), 3, "Should have 3 Dash ListItem events");
+
+    let list_end_count = events
+        .iter()
+        .filter(|e| matches!(e, ParseEvent::ListEnd))
+        .count();
+    assert_eq!(list_end_count, 1, "Should have only 1 ListEnd (from finalize)");
+}
+
+#[test]
+fn test_mixed_list_after_blank_line() {
+    // An ordered list followed by a blank line then an unordered item:
+    // the parser keeps the list alive (deferred close is cancelled by
+    // the new list item), so both item types appear in the same list.
+    let mut parser = Parser::new();
+    let mut events = Vec::new();
+
+    for line in "1. Item\n\n- bullet".lines() {
+        events.extend(parser.parse_line(line));
+    }
+    events.extend(parser.finalize());
+
+    // Should have an ordered ListItem
+    let has_ordered = events
+        .iter()
+        .any(|e| matches!(e, ParseEvent::ListItem { bullet: ListBullet::Ordered(_), .. }));
+    assert!(has_ordered, "Should have an ordered ListItem");
+
+    // Should have a dash ListItem
+    let has_dash = events
+        .iter()
+        .any(|e| matches!(e, ParseEvent::ListItem { bullet: ListBullet::Dash, .. }));
+    assert!(has_dash, "Should have a Dash ListItem");
+
+    // Both items are in the same list context — only one ListEnd from finalize
+    let list_end_count = events
+        .iter()
+        .filter(|e| matches!(e, ParseEvent::ListEnd))
+        .count();
+    assert_eq!(list_end_count, 1, "Should have exactly 1 ListEnd (from finalize)");
+}
+
+#[test]
+fn test_multiple_consecutive_blank_lines_in_list() {
+    let mut parser = Parser::new();
+    let mut events = Vec::new();
+
+    for line in "1. A\n\n\n2. B".lines() {
+        events.extend(parser.parse_line(line));
+    }
+    events.extend(parser.finalize());
+
+    let ordered_nums: Vec<usize> = events
+        .iter()
+        .filter_map(|e| match e {
+            ParseEvent::ListItem { bullet: ListBullet::Ordered(n), .. } => Some(*n),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(ordered_nums, vec![1, 2], "Consecutive blanks should be collapsed, numbering preserved");
+}
+
+#[test]
+fn test_loose_list_then_paragraph() {
+    let mut parser = Parser::new();
+    let mut events = Vec::new();
+
+    for line in "1. A\n\n2. B\n\nSome paragraph".lines() {
+        events.extend(parser.parse_line(line));
+    }
+    events.extend(parser.finalize());
+
+    let ordered_nums: Vec<usize> = events
+        .iter()
+        .filter_map(|e| match e {
+            ParseEvent::ListItem { bullet: ListBullet::Ordered(n), .. } => Some(*n),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(ordered_nums, vec![1, 2], "Should have ordered items 1 and 2");
+
+    // ListEnd should appear before the paragraph text
+    let list_end_idx = events
+        .iter()
+        .position(|e| matches!(e, ParseEvent::ListEnd))
+        .expect("Should have a ListEnd");
+
+    let paragraph_idx = events
+        .iter()
+        .position(|e| match e {
+            ParseEvent::Text(t) if t.contains("Some paragraph") => true,
+            ParseEvent::InlineElements(elems) => elems.iter().any(|el| {
+                matches!(el, streamdown_parser::InlineElement::Text(t) if t.contains("Some paragraph"))
+            }),
+            _ => false,
+        })
+        .expect("Should have paragraph text containing 'Some paragraph'");
+
+    assert!(
+        list_end_idx < paragraph_idx,
+        "ListEnd should appear before the paragraph text"
+    );
+}
+
+// =============================================================================
 // Rendering Tests
 // =============================================================================
 
@@ -517,13 +660,28 @@ fn test_render_with_custom_style() {
     let mut output = Vec::new();
 
     let style = RenderStyle {
-        bright: "#ff0000".to_string(),
-        head: "#00ff00".to_string(),
-        symbol: "#0000ff".to_string(),
-        grey: "#888888".to_string(),
-        dark: "#111111".to_string(),
-        mid: "#333333".to_string(),
-        light: "#555555".to_string(),
+        h1: "#00ff00".to_string(),
+        h2: "#00ff00".to_string(),
+        h3: "#ff0000".to_string(),
+        h4: "#ff0000".to_string(),
+        h5: "#888888".to_string(),
+        h6: "#888888".to_string(),
+        code_bg: "#111111".to_string(),
+        code_fg: String::new(),
+        code_dim: false,
+        code_pad: false,
+        code_label: "#ff0000".to_string(),
+        bullet: "#0000ff".to_string(),
+        table_header_bg: "#333333".to_string(),
+        table_body_bg: "#111111".to_string(),
+        table_border: "#888888".to_string(),
+        blockquote_border: "#888888".to_string(),
+        think_border: "#888888".to_string(),
+        hr: "#888888".to_string(),
+        link_url: "#ff0000".to_string(),
+        image_marker: "#0000ff".to_string(),
+        footnote: "#ff0000".to_string(),
+        heading_centered: true,
     };
 
     {

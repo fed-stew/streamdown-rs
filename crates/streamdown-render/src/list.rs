@@ -139,13 +139,21 @@ fn render_inline_content(content: &str, style: &RenderStyle) -> String {
                 result.push_str(UNDERLINE_OFF);
             }
             InlineElement::Code(text) => {
-                // Inline code with background
+                // Inline code with background and optional foreground
+                // Use non-breaking spaces for padding so text_wrap won't split here
                 let bg = bg_color(&style.code_bg);
+                let fg = fg_color(&style.code_fg);
+                let dim = if style.code_dim { DIM_ON } else { "" };
                 result.push_str(&bg);
-                result.push_str(DIM_ON);
-                result.push(' ');
+                result.push_str(&fg);
+                result.push_str(dim);
+                if style.code_pad {
+                    result.push('\u{00a0}');
+                }
                 result.push_str(&text);
-                result.push(' ');
+                if style.code_pad {
+                    result.push('\u{00a0}');
+                }
                 result.push_str(RESET);
             }
             InlineElement::Link { text, url } => {
@@ -200,8 +208,7 @@ pub fn render_list_item(
 
     // Calculate marker
     let marker = match bullet {
-        ListBullet::Ordered(_) => {
-            let num = list_state.next_number();
+        ListBullet::Ordered(num) => {
             format!("{}.", num)
         }
         ListBullet::PlusExpand => "⊞".to_string(), // Squared plus

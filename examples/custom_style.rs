@@ -29,22 +29,36 @@ print(greet("World"))
 "#;
 
     // Create a custom style with different colors
-    // Colors are in "r;g;bm" format for ANSI sequences
     let custom_style = RenderStyle {
-        // Bright cyan for emphasis
-        bright: "0;255;255".to_string(),
-        // Green for headings
-        head: "0;255;128".to_string(),
-        // Yellow for symbols/bullets
-        symbol: "255;255;0".to_string(),
-        // Gray for muted text
-        grey: "128;128;128".to_string(),
-        // Dark blue for backgrounds
-        dark: "20;20;60".to_string(),
-        // Medium purple
-        mid: "80;60;120".to_string(),
-        // Light lavender
-        light: "180;160;220".to_string(),
+        // Headings: green gradient
+        h1: "0;255;128".to_string(),
+        h2: "0;220;128".to_string(),
+        h3: "0;200;128".to_string(),
+        h4: "0;180;128".to_string(),
+        h5: "0;160;128".to_string(),
+        h6: "0;140;128".to_string(),
+        // Code blocks: dark blue background, cyan labels
+        code_bg: "20;20;60".to_string(),
+        code_fg: String::new(),
+        code_dim: true,
+        code_pad: true,
+        code_label: "0;255;255".to_string(),
+        // Lists: yellow bullets
+        bullet: "255;255;0".to_string(),
+        // Tables: purple tones
+        table_header_bg: "80;60;120".to_string(),
+        table_body_bg: "20;20;60".to_string(),
+        table_border: "180;160;220".to_string(),
+        // Borders and decorations
+        blockquote_border: "0;255;255".to_string(),
+        think_border: "128;128;128".to_string(),
+        hr: "128;128;128".to_string(),
+        // Links and references
+        link_url: "0;255;255".to_string(),
+        image_marker: "255;255;0".to_string(),
+        footnote: "180;160;220".to_string(),
+        // Left-align headings instead of centering
+        heading_centered: false,
     };
 
     // Create output buffer
@@ -61,6 +75,8 @@ print(greet("World"))
     {
         // Create renderer with custom style
         let mut renderer = Renderer::with_style(&mut output, width, custom_style);
+        // Disable thick block borders (▄▄▄/▀▀▀)
+        renderer.set_pretty_pad(false);
 
         // Parse and render
         for line in markdown.lines() {

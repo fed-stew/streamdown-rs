@@ -19,6 +19,11 @@ fn render(input: &str, width: usize) -> String {
                 renderer.render_event(&event).unwrap();
             }
         }
+
+        // Flush any remaining state (e.g., buffered table)
+        for event in parser.finalize() {
+            renderer.render_event(&event).unwrap();
+        }
     }
 
     // Strip ANSI codes for cleaner snapshots

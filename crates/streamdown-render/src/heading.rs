@@ -37,37 +37,51 @@ pub fn render_heading(
     let mut result = Vec::new();
 
     for line in lines {
-        let line_width = visible_length(&line);
-        let spaces_to_center = (width.saturating_sub(line_width)) / 2;
-        let center_pad = " ".repeat(spaces_to_center);
-
         let rendered = match level {
             1 => {
-                // h1: Bold, colored, centered
                 let fg = fg_color(&style.h1);
-                format!(
-                    "{}\n{}{}{}{}{}{}{}",
-                    left_margin, left_margin, BOLD_ON, fg, center_pad, line, BOLD_OFF, RESET
-                )
+                if style.heading_centered {
+                    let line_width = visible_length(&line);
+                    let spaces_to_center = (width.saturating_sub(line_width)) / 2;
+                    let center_pad = " ".repeat(spaces_to_center);
+                    format!(
+                        "{}\n{}{}{}{}{}{}{}",
+                        left_margin, left_margin, BOLD_ON, fg, center_pad, line, BOLD_OFF, RESET
+                    )
+                } else {
+                    format!(
+                        "{}\n{}{}{}{}{}{}",
+                        left_margin, left_margin, BOLD_ON, fg, line, BOLD_OFF, RESET
+                    )
+                }
             }
             2 => {
-                // h2: Bold, colored, centered
                 let fg = fg_color(&style.h2);
-                let spaces_right = width
-                    .saturating_sub(line_width)
-                    .saturating_sub(spaces_to_center);
-                format!(
-                    "{}\n{}{}{}{}{}{}{}{}",
-                    left_margin,
-                    left_margin,
-                    BOLD_ON,
-                    fg,
-                    center_pad,
-                    line,
-                    " ".repeat(spaces_right),
-                    BOLD_OFF,
-                    RESET
-                )
+                if style.heading_centered {
+                    let line_width = visible_length(&line);
+                    let spaces_to_center = (width.saturating_sub(line_width)) / 2;
+                    let center_pad = " ".repeat(spaces_to_center);
+                    let spaces_right = width
+                        .saturating_sub(line_width)
+                        .saturating_sub(spaces_to_center);
+                    format!(
+                        "{}\n{}{}{}{}{}{}{}{}",
+                        left_margin,
+                        left_margin,
+                        BOLD_ON,
+                        fg,
+                        center_pad,
+                        line,
+                        " ".repeat(spaces_right),
+                        BOLD_OFF,
+                        RESET
+                    )
+                } else {
+                    format!(
+                        "{}\n{}{}{}{}{}{}",
+                        left_margin, left_margin, BOLD_ON, fg, line, BOLD_OFF, RESET
+                    )
+                }
             }
             3 => {
                 // h3: Bold, colored
@@ -154,5 +168,18 @@ mod tests {
         let long_text = "This is a very long heading that should wrap to multiple lines";
         let lines = render_heading(1, long_text, 20, "", &default_style());
         assert!(!lines.is_empty());
+    }
+
+    #[test]
+    fn test_h1_left_aligned() {
+        let mut style = default_style();
+        style.heading_centered = false;
+        let lines = render_heading(1, "Title", 80, "", &style);
+        assert!(!lines.is_empty());
+        // Should not have center padding before "Title"
+        assert!(lines[0].contains(BOLD_ON));
+        // The line after the newline should start with bold+color then text directly
+        let after_newline = lines[0].split('\n').nth(1).unwrap();
+        assert!(!after_newline.starts_with(' '));
     }
 }
