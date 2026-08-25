@@ -5,7 +5,6 @@
 //! formatting options.
 
 use streamdown_ansi::utils::{ansi_collapse, extract_ansi_codes, visible, visible_length};
-use streamdown_parser::tokenizer::cjk_count;
 
 /// Result of wrapping text.
 #[derive(Debug, Clone)]
@@ -121,8 +120,6 @@ pub fn text_wrap(
     let mut truncated = false;
     let resetter = if preserve_format { "" } else { "\x1b[0m" };
 
-    let mut prev_word = String::new();
-
     for word in words.iter().chain(std::iter::once(&String::new())) {
         // Extract ANSI codes from the word
         let codes = extract_ansi_codes(word);
@@ -139,14 +136,7 @@ pub fn text_wrap(
         let space_needed = if current_line.is_empty() || word_visible_len == 0 {
             0
         } else {
-            1 // space between words
-        };
-
-        // CJK: no space needed between CJK characters
-        let space_needed = if cjk_count(word) > 0 && cjk_count(&prev_word) > 0 {
-            0
-        } else {
-            space_needed
+            1 // preserve explicit spaces between words
         };
 
         if word_visible_len > 0 && line_visible_len + word_visible_len + space_needed <= width {
@@ -208,8 +198,6 @@ pub fn text_wrap(
             current_style.push(code.clone());
         }
         current_style = ansi_collapse(&current_style, "");
-
-        prev_word = word.clone();
     }
 
     // Don't forget the last line
@@ -351,6 +339,63 @@ mod tests {
         let result = text_wrap("hello world", 20, 0, "> ", "  ", false, false);
         assert!(!result.lines.is_empty());
         assert!(result.lines[0].starts_with("> "));
+    }
+
+    #[test]
+    fn test_text_wrap_korean_output() {
+        let text = "하나 둘 셋";
+        let result = text_wrap(text, 20, 0, "", "", false, false);
+
+        assert_eq!(result.lines.len(), 1);
+        assert_eq!(visible(&result.lines[0]), text);
+    }
+
+    #[test]
+    fn test_text_wrap_chinese_output() {
+        let text = "一 二 三";
+        let result = text_wrap(text, 20, 0, "", "", false, false);
+
+        assert_eq!(result.lines.len(), 1);
+        assert_eq!(visible(&result.lines[0]), text);
+    }
+
+    #[test]
+    fn test_text_wrap_japanese_output() {
+        let text = "いち に さん";
+        let result = text_wrap(text, 20, 0, "", "", false, false);
+
+        assert_eq!(result.lines.len(), 1);
+        assert_eq!(visible(&result.lines[0]), text);
+    }
+
+    #[test]
+    fn test_text_wrap_korean_multiline_spacing() {
+        let text = "하나 둘 셋";
+        let result = text_wrap(text, 8, 0, "", "", false, false);
+
+        assert_eq!(result.lines.len(), 2);
+        assert_eq!(visible(&result.lines[0]), "하나 둘 ");
+        assert_eq!(visible(&result.lines[1]), "셋");
+    }
+
+    #[test]
+    fn test_text_wrap_chinese_multiline_spacing() {
+        let text = "一 二 三";
+        let result = text_wrap(text, 6, 0, "", "", false, false);
+
+        assert_eq!(result.lines.len(), 2);
+        assert_eq!(visible(&result.lines[0]), "一 二 ");
+        assert_eq!(visible(&result.lines[1]), "三");
+    }
+
+    #[test]
+    fn test_text_wrap_japanese_multiline_spacing() {
+        let text = "いち に さん";
+        let result = text_wrap(text, 8, 0, "", "", false, false);
+
+        assert_eq!(result.lines.len(), 2);
+        assert_eq!(visible(&result.lines[0]), "いち に ");
+        assert_eq!(visible(&result.lines[1]), "さん");
     }
 
     #[test]
