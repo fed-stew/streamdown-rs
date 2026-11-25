@@ -543,6 +543,18 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_single_tilde_in_text() {
+        let mut parser = InlineParser::new();
+        let elements = parser.parse("See ~/test.txt, <~/notes.md>, and ~10ms");
+        assert_eq!(
+            elements,
+            vec![InlineElement::Text(
+                "See ~/test.txt, <~/notes.md>, and ~10ms".to_string()
+            )]
+        );
+    }
+
+    #[test]
     fn test_parse_inline_code() {
         let mut parser = InlineParser::new();
         let elements = parser.parse("Use `code` here");

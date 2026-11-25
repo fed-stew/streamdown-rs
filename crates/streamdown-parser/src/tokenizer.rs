@@ -11,7 +11,7 @@ use std::sync::LazyLock;
 static INLINE_TOKEN_RE: LazyLock<Regex> = LazyLock::new(|| {
     // Match formatting markers OR runs of non-marker text
     // Order matters: longer markers first
-    Regex::new(r"(```+|~~|\*\*\*|\*\*_|_\*\*|\*\*|\*|___|__|_|`+|[^~_*`]+)").unwrap()
+    Regex::new(r"(```+|~~|~|\*\*\*|\*\*_|_\*\*|\*\*|\*|___|__|_|`+|[^~_*`]+)").unwrap()
 });
 
 /// Regex for matching links: [text](url)
@@ -484,5 +484,22 @@ mod tests {
         let tokens = tokenizer.tokenize("`[text](url)`");
         // Link inside backticks should NOT be extracted
         assert!(!tokens.iter().any(|t| matches!(t, Token::Link { .. })));
+    }
+
+    #[test]
+    fn test_single_tilde_preserved_as_text() {
+        let tokenizer = Tokenizer::new();
+        let tokens = tokenizer.tokenize("See ~/test.txt and ~~strike~~");
+        assert_eq!(
+            tokens,
+            vec![
+                Token::Text("See ".to_string()),
+                Token::Text("~".to_string()),
+                Token::Text("/test.txt and ".to_string()),
+                Token::DoubleTilde,
+                Token::Text("strike".to_string()),
+                Token::DoubleTilde,
+            ]
+        );
     }
 }
